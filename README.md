@@ -1,9 +1,12 @@
 # Signals
 
-This is a Ruby port of [@preact/signals-core](https://github.com/preactjs/signals).
+This project is a Ruby port of the [PreactJS Signals](https://github.com/preactjs/signals) library created by the PreactJS team.
 
-Tests are incomplete but the ones that exist pass.
-Use at your own risk!
+The original library is released under the [MIT License](https://github.com/preactjs/signals/blob/main/LICENSE) and this port is also released under the same license.
+
+**⚠️ Tests are incomplete but the ones that exist pass. Use at your own risk! ⚠️**
+
+Contributions are welcome!
 
 ## Installation:
 
