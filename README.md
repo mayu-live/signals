@@ -44,11 +44,11 @@ p(counter.value)
 counter.value = 1
 ```
 
-Writing to a signal is done by setting its `.value` property. Changing a signal's value synchronously updates every [computed](#computedfn) and [effect](#effectfn) that depends on that signal, ensuring your app state is always consistent.
+Writing to a signal is done by setting its `.value` property. Changing a signal's value synchronously updates every [computed](#computed) and [effect](#effect) that depends on that signal, ensuring your app state is always consistent.
 
 #### `signal.peek`
 
-In the rare instance that you have an effect that should write to another signal based on the previous value, but you _don't_ want the effect to be subscribed to that signal, you can read a signals's previous value via `signal.peek()`.
+In the rare instance that you have an effect that should write to another signal based on the previous value, but you _don't_ want the effect to be subscribed to that signal, you can read a signals's previous value via `signal.peek`.
 
 ```ruby
 counter = signal(0)
@@ -63,7 +63,7 @@ effect do
 end
 ```
 
-Note that you should only use `signal.peek()` if you really need it. Reading a signal's value via `signal.value` is the preferred way in most scenarios.
+Note that you should only use `signal.peek` if you really need it. Reading a signal's value via `signal.value` is the preferred way in most scenarios.
 
 ### `computed(&)`
 
@@ -87,7 +87,7 @@ p(full_name.value)
 
 Any signal that is accessed inside the `computed`'s callback method will be automatically subscribed to and tracked as a dependency of the computed signal.
 
-### `effect(fn)`
+### `effect(&)`
 
 The `effect` method is the last piece that makes everything reactive. When you access a signal inside its callback function, that signal and every dependency of said signal will be activated and subscribed to. In that regard it is very similar to [`computed(&)`](#computed). By default all updates are lazy, so nothing will update until you access a signal inside `effect`.
 
@@ -123,7 +123,7 @@ dispose.call()
 surname.value = "Doe 2"
 ```
 
-### `batch(fn)`
+### `batch(&)`
 
 The `batch` method allows you to combine multiple signal writes into one single update that is triggered at the end when the callback completes.
 
@@ -133,7 +133,7 @@ surname = signal("Doe")
 full_name = computed { name.value + " " + surname.value }
 
 # Logs: "Jane Doe"
-effect { p full_name.value }
+effect { p(full_name.value) }
 
 # Combines both signal writes into one update. Once the callback
 # returns the `effect` will trigger and we'll log "Foo Bar"
@@ -178,6 +178,13 @@ batch do
 end
 # Now the callback completed and we'll trigger the effect.
 ```
+
+## Credits
+
+This is 100% a port of the [PreactJS Signals](https://github.com/preactjs/signals) library.
+The code was basically just translated into Ruby with some minor changes.
+
+It's quite complicated, so huge thanks to the Preact team for making this possible!
 
 ## License
 
