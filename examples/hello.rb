@@ -1,5 +1,7 @@
 # frozen_string_literal: true
+# typed: strict
 
+require "bundler/setup"
 require_relative "../lib/mayu/signals"
 
 S = Mayu::Signals::S

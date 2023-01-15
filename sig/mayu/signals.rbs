@@ -1,6 +1,30 @@
 module Mayu
   module Signals
-    VERSION: String
     # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+    module Core
+      class Signal
+        class Proxy[Elem]
+          def initialize: (Signal signal) -> void
+          def subscribe: () { (Elem arg0) -> void } -> Method
+          def inspect: () -> String
+          def to_s: () -> String
+          def peek: () -> Elem
+          def value: () -> Elem
+          def value=: (Elem new_value) -> void
+        end
+      end
+
+      module Helpers
+        def root: () { () -> void } -> void
+        def batch: () { () -> void } -> void
+        def signal: [U] (U initial_value) -> Core::Signal::Proxy[U & Object]
+        def computed: [U] () { () -> U } -> Core::Signal::Proxy[U & Object]
+        def effect: [U] () { () -> U } -> Method
+      end
+
+      module S
+        extend Helpers
+      end
+    end
   end
 end

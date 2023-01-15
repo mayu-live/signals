@@ -5,12 +5,14 @@ require_relative "../lib/mayu/signals"
 
 S = Mayu::Signals::S
 
-class Spy < Proc
-  def initialize(...)
-    super
+class Spy
+  def initialize(&block)
+    @block = block
     @called_times = 0
     @return_value = nil
   end
+
+  def to_proc = method(:call).to_proc
 
   def called_times = @called_times
   def return_value = @return_value
@@ -18,7 +20,7 @@ class Spy < Proc
 
   def call(...)
     @called_times += 1
-    super.tap { @return_value = _1 }
+    @return_value = @block.call(...)
   end
 end
 
