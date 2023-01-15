@@ -19,14 +19,6 @@ module Mayu
         Fiber[name] = prev
       end
 
-      def self.with_thread_local(name, value, &)
-        prev = Thread.current[name]
-        Thread.current[name] = value
-        yield
-      ensure
-        Thread.current[name] = prev
-      end
-
       def self.get_caller_location
         location = caller.find { !_1.start_with?(__FILE__) }
         location.match(/^(.*):(\d+):in /) => [file, line]

@@ -171,11 +171,12 @@ module Mayu
             @signal = signal
           end
 
-          def inspect = @signal.inspect
-          def value = @signal.value
-          def peek = @signal.peek
           def subscribe(&) = @signal.subscribe(&)
+          def inspect = @signal.inspect
+          alias to_s inspect
 
+          def peek = @signal.peek
+          def value = @signal.value
           def value=(new_value)
             @signal.value = new_value
           end
@@ -408,10 +409,13 @@ module Mayu
         end
       end
 
-      class CycleError < StandardError
+      class CycleDetectedError < StandardError
       end
 
-      def self.cycle_detected! = raise CycleError, "Cycle detected"
+      def self.cycle_detected! = raise CycleDetectedError
+
+      def self.with_eval_context(eval_context, &) =
+        Utils.with_fiber_local(:eval_context, eval_context, &)
 
       def self.needs_to_recompute?(target)
         # Check the dependencies for changed values. The dependency list is already
@@ -621,10 +625,6 @@ module Mayu
             Core.dispose_effect(self) if @flags.set?(Flags::DISPOSED)
           end
         end
-      end
-
-      def self.with_eval_context(eval_context, &)
-        Utils.with_fiber_local(:eval_context, eval_context, &)
       end
     end
 
