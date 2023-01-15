@@ -571,6 +571,7 @@ module Mayu
 
         def initialize(&compute)
           @compute = compute
+          @source_location = compute.source_location
           @cleanup = nil
           @sources = nil
           @next_batched_effect = nil
@@ -578,7 +579,7 @@ module Mayu
         end
 
         def inspect
-          @compute.source_location => [file, line]
+          @source_location => [file, line]
           "𝙛𝙭[#{@flags}](#{file}:#{line})"
         end
 
