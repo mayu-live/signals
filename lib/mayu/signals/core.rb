@@ -178,10 +178,16 @@ module Mayu
 
           sig {params(block: T.proc.params(arg0: Elem).void).returns(Method)}
           def subscribe(&block) = @signal.subscribe(&block)
+
           sig {returns(String)}
           def inspect = @signal.inspect
+
           sig {returns(String)}
-          def to_s = inspect
+          def to_s = value.to_s
+          sig {returns(Integer)}
+          def to_i = T.unsafe(value).to_i
+          sig {returns(Float)}
+          def to_f = T.unsafe(value).to_f
 
           sig {returns(Elem)}
           def peek = @signal.peek
@@ -206,7 +212,7 @@ module Mayu
         end
 
         def inspect
-          "𝙎#{Utils.numbers_to_subscript(@version)}(#{@value.inspect})"
+          "𝙎#{Utils.numbers_to_subscript(@version.to_s)}(#{@value.inspect})"
         end
 
         def proxy = @proxy ||= Proxy.new(self)
