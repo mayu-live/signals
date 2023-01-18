@@ -235,30 +235,30 @@ describe "Signals" do
       assert_equal(0, spy.called_times)
     end
 
-    # it "should conditionally unsubscribe from signals" do
-    #   a = S.signal("a")
-    #   b = S.signal("b")
-    #   cond = S.signal(true)
-    #
-    #   spy = sinon.spy( do
-    #     return cond.value ? a.value : b.value
-    #   end
-    #
-    #   S.effect(&spy)
-    #   assert_equal(1, spy.called_times)
-    #
-    #   b.value = "bb"
-    #   assert_equal(1, spy.called_times)
-    #
-    #   cond.value = false
-    #   expect(spy).to.be.calledTwice
-    #
-    #   spy.reset_history!
-    #
-    #   a.value = "aaa"
-    #   assert_equal(0, spy.called_times)
-    # end
-    #
+    it "should conditionally unsubscribe from signals" do
+      a = S.signal("a")
+      b = S.signal("b")
+      cond = S.signal(true)
+
+      spy = Spy.new do
+        cond.value ? a.value : b.value
+      end
+
+      S.effect(&spy)
+      assert_equal(1, spy.called_times)
+
+      b.value = "bb"
+      assert_equal(1, spy.called_times)
+
+      cond.value = false
+      assert_equal(2, spy.called_times)
+
+      spy.reset_history!
+
+      a.value = "aaa"
+      assert_equal(0, spy.called_times)
+    end
+
     # it "should batch writes" do
     #   a = S.signal("a")
     #   spy = Spy.new { a.value }
