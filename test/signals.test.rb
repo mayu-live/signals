@@ -1047,81 +1047,81 @@ describe "Signals" do
         assert_equal(2, b.peek)
       end
 
-      # it "should detect simple dependency cycles" do
-      #   a: Signal = S.computed { a.peek }
-      #   expect(() => a.peek).to.throw(/Cycle detected/)
-      # end
-      #
-      # it "should detect deep dependency cycles" do
-      #   a: Signal = S.computed { b.value }
-      #   b: Signal = S.computed { c.value }
-      #   c: Signal = S.computed { d.value }
-      #   d: Signal = S.computed { a.peek }
-      #   expect(() => a.peek).to.throw(/Cycle detected/)
-      # end
-      #
-      # it "should not make surrounding effect depend on the computed" do
-      #   s = S.signal(1)
-      #   c = S.computed { s.value }
-      #   spy = Spy.new do
-      #     c.peek()
-      #   end
-      #
-      #   S.effect(&spy)
-      #   assert_equal(1, spy.called_times)
-      #
-      #   s.value = 2
-      #   assert_equal(1, spy.called_times)
-      # end
-      #
-      # it "should not make surrounding computed depend on the computed" do
-      #   s = S.signal(1)
-      #   c = S.computed { s.value }
-      #
-      #   spy = Spy.new do
-      #     c.peek()
-      #   end
-      #
-      #   d = S.computed(spy)
-      #   d.value
-      #   assert_equal(1, spy.called_times)
-      #
-      #   s.value = 2
-      #   d.value
-      #   assert_equal(1, spy.called_times)
-      # end
-      #
-      # it "should not make surrounding effect depend on the peeked computed's dependencies" do
-      #   a = S.signal(1)
-      #   b = S.computed { a.value }
-      #   spy = Spy.new {}
-      #   S.effect do
-      #     spy.call
-      #     b.peek
-      #   end
-      #   assert_equal(1, spy.called_times)
-      #   spy.reset_history!
-      #
-      #   a.value = 1
-      #   assert_equal(0, spy.called_times)
-      # end
-      #
-      # it "should not make surrounding computed depend on peeked computed's dependencies" do
-      #   a = S.signal(1)
-      #   b = S.computed { a.value }
-      #   spy = Spy.new {}
-      #   d = S.computed do
-      #     spy.call
-      #     b.peek
-      #   end
-      #   d.value
-      #   assert_equal(1, spy.called_times)
-      #   spy.reset_history!
-      #
-      #   a.value = 1
-      #   d.value
-      #   assert_equal(0, spy.called_times)
-      # end
+      it "should detect simple dependency cycles" do
+        a = S.computed { a.peek }
+        assert_raises(Mayu::Signals::Core::CycleDetectedError) { a.peek }
+      end
+
+      it "should detect deep dependency cycles" do
+        a = S.computed { a.value }
+        b = S.computed { c.value }
+        c = S.computed { d.value }
+        d = S.computed { a.peek }
+        assert_raises(Mayu::Signals::Core::CycleDetectedError) { a.peek }
+      end
+
+      it "should not make surrounding effect depend on the computed" do
+        s = S.signal(1)
+        c = S.computed { s.value }
+        spy = Spy.new do
+          c.peek
+        end
+
+        S.effect(&spy)
+        assert_equal(1, spy.called_times)
+
+        s.value = 2
+        assert_equal(1, spy.called_times)
+      end
+
+      it "should not make surrounding computed depend on the computed" do
+        s = S.signal(1)
+        c = S.computed { s.value }
+
+        spy = Spy.new do
+          c.peek()
+        end
+
+        d = S.computed(&spy)
+        d.value
+        assert_equal(1, spy.called_times)
+
+        s.value = 2
+        d.value
+        assert_equal(1, spy.called_times)
+      end
+
+      it "should not make surrounding effect depend on the peeked computed's dependencies" do
+        a = S.signal(1)
+        b = S.computed { a.value }
+        spy = Spy.new {}
+        S.effect do
+          spy.call
+          b.peek
+        end
+        assert_equal(1, spy.called_times)
+        spy.reset_history!
+
+        a.value = 1
+        assert_equal(0, spy.called_times)
+      end
+
+      it "should not make surrounding computed depend on peeked computed's dependencies" do
+        a = S.signal(1)
+        b = S.computed { a.value }
+        spy = Spy.new {}
+        d = S.computed do
+          spy.call
+          b.peek
+        end
+        d.value
+        assert_equal(1, spy.called_times)
+        spy.reset_history!
+
+        a.value = 1
+        d.value
+        assert_equal(0, spy.called_times)
+      end
     end
 
     describe "garbage collection" do
@@ -1219,7 +1219,7 @@ describe "Signals" do
       #   c = S.computed { a.value }
       #
       #   spy = Spy.new { b.value + " " + c.value }
-      #   d = S.computed(spy)
+      #   d = S.computed(&spy)
       #
       #   assert_equal("a a", d.value)
       #   assert_equal(1, spy.called_times)
@@ -1245,7 +1245,7 @@ describe "Signals" do
       #   d = S.computed { b.value + " " + c.value }
       #
       #   spy = Spy.new { d.value }
-      #   e = S.computed(spy)
+      #   e = S.computed(&spy)
       #
       #   assert_equal("a a", e.value)
       #   assert_equal(1, spy.called_times)
@@ -1265,7 +1265,7 @@ describe "Signals" do
       #   end
       #
       #   spy = Spy.new { b.value }
-      #   c = S.computed(spy)
+      #   c = S.computed(&spy)
       #
       #   assert_equal("foo", c.value)
       #   assert_equal(1, spy.called_times)
@@ -1372,10 +1372,10 @@ describe "Signals" do
       #   # *C
       #   a = S.signal("a")
       #   spyB = Spy.new { a.value }
-      #   b = S.computed(spyB)
+      #   b = S.computed(&spyB)
       #
       #   spy_c = Spy.new { b.value }
-      #   c = S.computed(spy_c)
+      #   c = S.computed(&spy_c)
       #
       #   d = S.computed { a.value }
       #
@@ -1413,7 +1413,7 @@ describe "Signals" do
       #     "c"
       #   end
       #   spy = Spy.new { b.value + " " + c.value }
-      #   d = S.computed(spy)
+      #   d = S.computed(&spy)
       #   assert_equal("a c", d.value)
       #   spy.reset_history!
       #
@@ -1442,7 +1442,7 @@ describe "Signals" do
       #     "d"
       #   end
       #   spy = Spy.new { b.value + " " + c.value + " " + d.value }
-      #   e = S.computed(spy)
+      #   e = S.computed(&spy)
       #   assert_equal("a c d", e.value)
       #   spy.reset_history!
       #
@@ -1518,7 +1518,7 @@ describe "Signals" do
       #     "c"
       #   end
       #   spy = Spy.new { b.value + " " + c.value }
-      #   d = S.computed(spy)
+      #   d = S.computed(&spy)
       #   assert_equal("b c", d.value)
       #   spy.reset_history!
       #
@@ -1606,13 +1606,13 @@ describe "Signals" do
     #   b = S.computed { a.value }
     #
     #   spy_c = Spy.new { b.value }
-    #   c = S.computed(spy_c)
+    #   c = S.computed(&spy_c)
     #
     #   spy_d = Spy.new { c.value }
-    #   d = S.computed(spy_d)
+    #   d = S.computed(&spy_d)
     #
     #   spy_e = Spy.new { d.value }
-    #   e = S.computed(spy_e)
+    #   e = S.computed(&spy_e)
     #
     #   spy_c.reset_history!
     #   spy_d.reset_history!
