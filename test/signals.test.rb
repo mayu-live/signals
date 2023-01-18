@@ -9,18 +9,21 @@ class Spy
   def initialize(&block)
     @block = block
     @called_times = 0
+    @called_with = nil
     @return_value = nil
   end
 
   def to_proc = method(:call).to_proc
 
-  def called_times = @called_times
-  def return_value = @return_value
+  attr :called_times
+  attr :called_with
+  attr :return_value
   def reset_history! = @called_times = 0
 
-  def call(...)
+  def call(*args, &)
     @called_times += 1
-    @return_value = @block.call(...)
+    @called_with = args
+    @return_value = @block.call(*args, &)
   end
 end
 
@@ -259,405 +262,414 @@ describe "Signals" do
       assert_equal(0, spy.called_times)
     end
 
-    # it "should batch writes" do
-    #   a = S.signal("a")
-    #   spy = Spy.new { a.value }
-    #   S.effect(&spy)
-    #   spy.reset_history!
-    #
-    #   S.effect do
-    #     a.value = "aa"
-    #     a.value = "aaa"
-    #   end
-    #
-    #   assert_equal(1, spy.called_times)
-    # end
-    #
-    # it "should call the cleanup callback before the next run" do
-    #   a = S.signal(0)
-    #   spy = Spy.new {}
-    #
-    #   S.effect do
-    #     a.value
-    #     return spy
-    #   end
-    #   assert_equal(0, spy.called_times)
-    #   a.value = 1
-    #   assert_equal(1, spy.called_times)
-    #   a.value = 2
-    #   expect(spy).to.be.calledTwice
-    # end
-    #
-    # it "should call only the callback from the previous run" do
-    #   spy1 = Spy.new {}
-    #   spy2 = Spy.new {}
-    #   spy3 = Spy.new {}
-    #   a = S.signal(spy1)
-    #
-    #   S.effect do
-    #     return a.value
-    #   end
-    #
-    #   assert_equal(0, spy1.called_times)
-    #   assert_equal(0, spy2.called_times)
-    #   assert_equal(0, spy3.called_times)
-    #
-    #   a.value = spy2
-    #   assert_equal(1, spy1.called_times)
-    #   assert_equal(0, spy2.called_times)
-    #   assert_equal(0, spy3.called_times)
-    #
-    #   a.value = spy3
-    #   assert_equal(1, spy1.called_times)
-    #   assert_equal(1, spy2.called_times)
-    #   assert_equal(0, spy3.called_times)
-    # end
-    #
-    # it "should call the cleanup callback function when disposed" do
-    #   spy = Spy.new {}
-    #
-    #   dispose = S.effect do
-    #     return spy
-    #   end
-    #   assert_equal(0, spy.called_times)
-    #   dispose()
-    #   assert_equal(1, spy.called_times)
-    # end
-    #
-    # it "should not recompute if the effect has been notified about changes, but no direct dependency has actually changed" do
-    #   s = S.signal(0)
-    #   c = S.computed do
-    #     s.value
-    #     return 0
-    #   end
-    #   spy = sinon.spy( do
-    #     c.value
-    #   end
-    #   S.effect(&spy)
-    #   assert_equal(1, spy.called_times)
-    #   spy.reset_history!
-    #
-    #   s.value = 1
-    #   assert_equal(0, spy.called_times)
-    # end
-    #
-    # it "should not recompute dependencies unnecessarily" do
-    #   spy = Spy.new {}
-    #   a = S.signal(0)
-    #   b = S.signal(0)
-    #   c = S.computed do
-    #     b.value
-    #     spy()
-    #   end
-    #   S.effect do
-    #     if a.value == 0
-    #       c.value
-    #     end
-    #   end
-    #   assert_equal(1, spy.called_times)
-    #
-    #   S.batch do
-    #     b.value = 1
-    #     a.value = 1
-    #   end
-    #   assert_equal(1, spy.called_times)
-    # end
-    #
-    # it "should not recompute dependencies out of order" do
-    #   a = S.signal(1)
-    #   b = S.signal(1)
-    #   c = S.signal(1)
-    #
-    #   spy = Spy.new { c.value }
-    #   d = computed(spy)
-    #
-    #   S.effect do
-    #     if a.value > 0
-    #       b.value
-    #       d.value
-    #     } else {
-    #       b.value
-    #     end
-    #   end
-    #   spy.reset_history!
-    #
-    #   S.batch do
-    #     a.value = 2
-    #     b.value = 2
-    #     c.value = 2
-    #   end
-    #   assert_equal(1, spy.called_times)
-    #   spy.reset_history!
-    #
-    #   S.batch do
-    #     a.value = -1
-    #     b.value = -1
-    #     c.value = -1
-    #   end
-    #   assert_equal(0, spy.called_times)
-    #   spy.reset_history!
-    # end
-    #
-    # it "should recompute if a dependency changes during computation after becoming a dependency" do
-    #   a = S.signal(0)
-    #   spy = sinon.spy( do
-    #     if a.value == 0
-    #       a.value += 1
-    #     end
-    #   end
-    #   S.effect(&spy)
-    #   expect(spy).to.be.calledTwice
-    # end
-    #
-    # it "should run the cleanup in an implicit batch" do
-    #   a = S.signal(0)
-    #   b = S.signal("a")
-    #   c = S.signal("b")
-    #   spy = Spy.new {}
-    #
-    #   S.effect do
-    #     b.value
-    #     c.value
-    #     spy(b.value + c.value)
-    #   end
-    #
-    #   S.effect do
-    #     a.value
-    #     return  do
-    #       b.value = "x"
-    #       c.value = "y"
-    #     end
-    #   end
-    #
-    #   assert_equal(1, spy.called_times)
-    #   spy.reset_history!
-    #
-    #   a.value = 1
-    #   assert_equal(1, spy.called_times)
-    #   expect(spy).to.be.calledWith("xy")
-    # end
-    #
-    # it "should not retrigger the effect if the cleanup modifies one of the dependencies" do
-    #   a = S.signal(0)
-    #   spy = Spy.new {}
-    #
-    #   S.effect do
-    #     spy(a.value)
-    #     return  do
-    #       a.value = 2
-    #     end
-    #   end
-    #   assert_equal(1, spy.called_times)
-    #   spy.reset_history!
-    #
-    #   a.value = 1
-    #   assert_equal(1, spy.called_times)
-    #   expect(spy).to.be.calledWith(2)
-    # end
-    #
-    # it "should run the cleanup if the effect disposes itself" do
-    #   a = S.signal(0)
-    #   spy = Spy.new {}
-    #
-    #   dispose = S.effect do
-    #     if a.value > 0
-    #       dispose()
-    #       return spy
-    #     end
-    #   end
-    #   assert_equal(0, spy.called_times)
-    #   a.value = 1
-    #   assert_equal(1, spy.called_times)
-    #   a.value = 2
-    #   assert_equal(1, spy.called_times)
-    # end
-    #
-    # it "should not run the effect if the cleanup function disposes it" do
-    #   a = S.signal(0)
-    #   spy = Spy.new {}
-    #
-    #   dispose = S.effect do
-    #     a.value
-    #     spy()
-    #     return  do
-    #       dispose()
-    #     end
-    #   end
-    #   assert_equal(1, spy.called_times)
-    #   a.value = 1
-    #   assert_equal(1, spy.called_times)
-    # end
-    #
-    # it "should not subscribe to anything if first run throws" do
-    #   s = S.signal(0)
-    #   spy = sinon.spy( do
-    #     s.value
-    #     raise "test"
-    #   end
-    #   expect(() => S.effect(&spy)).to.throw("test")
-    #   assert_equal(1, spy.called_times)
-    #
-    #   s.value += 1
-    #   assert_equal(1, spy.called_times)
-    # end
-    #
-    # it "should reset the cleanup if the effect throws" do
-    #   a = S.signal(0)
-    #   spy = Spy.new {}
-    #
-    #   S.effect do
-    #     if a.value == 0
-    #       return spy
-    #     } else {
-    #       raise "hello"
-    #     end
-    #   end
-    #   assert_equal(0, spy.called_times)
-    #   expect(() => (a.value = 1)).to.throw("hello")
-    #   assert_equal(1, spy.called_times)
-    #   a.value = 0
-    #   assert_equal(1, spy.called_times)
-    # end
-    #
-    # it "should dispose the effect if the cleanup callback throws" do
-    #   a = S.signal(0)
-    #   spy = Spy.new {}
-    #
-    #   S.effect do
-    #     if a.value == 0
-    #       return  do
-    #         raise "hello"
-    #       end
-    #     } else {
-    #       spy()
-    #     end
-    #   end
-    #   assert_equal(0, spy.called_times)
-    #   expect(() => a.value++).to.throw("hello")
-    #   assert_equal(0, spy.called_times)
-    #   a.value += 1
-    #   assert_equal(0, spy.called_times)
-    # end
-    #
-    # it "should run cleanups outside any evaluation context" do
-    #   spy = Spy.new {}
-    #   a = S.signal(0)
-    #   b = S.signal(0)
-    #   c = S.computed do
-    #     if a.value == 0
-    #       S.effect do
-    #         return  do
-    #           b.value
-    #         end
-    #       end
-    #     end
-    #     return a.value
-    #   end
-    #
-    #   S.effect do
-    #     spy()
-    #     c.value
-    #   end
-    #   assert_equal(1, spy.called_times)
-    #   spy.reset_history!
-    #
-    #   a.value = 1
-    #   assert_equal(1, spy.called_times)
-    #   spy.reset_history!
-    #
-    #   b.value = 1
-    #   assert_equal(0, spy.called_times)
-    # end
-    #
-    # it "should throw on cycles" do
-    #   a = S.signal(0)
-    #   i = 0
-    #
-    #   fn = () =>
-    #     S.effect do
-    #       // Prevent test suite from spinning if limit is not hit
-    #       if i++ > 200
-    #         raise "test failed"
-    #       end
-    #       a.value
-    #       a.value = NaN
-    #     end
-    #
-    #   expect(fn).to.throw(/Cycle detected/)
-    # end
-    #
-    # it "should throw on indirect cycles" do
-    #   a = S.signal(0)
-    #   i = 0
-    #
-    #   c = S.computed do
-    #     a.value
-    #     a.value = NaN
-    #     return NaN
-    #   end
-    #
-    #   fn = () =>
-    #     S.effect do
-    #       // Prevent test suite from spinning if limit is not hit
-    #       if i++ > 200
-    #         raise "test failed"
-    #       end
-    #       c.value
-    #     end
-    #
-    #   expect(fn).to.throw(/Cycle detected/)
-    # end
-    #
-    # it "should allow disposing the effect multiple times" do
-    #   dispose = S.effect { undefined }
-    #   dispose()
-    #   expect(() => dispose()).not.to.throw()
-    # end
-    #
-    # it "should allow disposing a running effect" do
-    #   a = S.signal(0)
-    #   spy = Spy.new {}
-    #   dispose = S.effect do
-    #     if a.value == 1
-    #       dispose()
-    #       spy()
-    #     end
-    #   end
-    #   assert_equal(0, spy.called_times)
-    #   a.value = 1
-    #   assert_equal(1, spy.called_times)
-    #   a.value = 2
-    #   assert_equal(1, spy.called_times)
-    # end
-    #
-    # it "should not run if it's first been triggered and then disposed in a batch" do
-    #   a = S.signal(0)
-    #   spy = Spy.new { a.value }
-    #   dispose = S.effect(&spy)
-    #   spy.reset_history!
-    #
-    #   S.batch do
-    #     a.value = 1
-    #     dispose()
-    #   end
-    #
-    #   assert_equal(0, spy.called_times)
-    # end
-    #
-    # it "should not run if it's been triggered, disposed and then triggered again in a batch" do
-    #   a = S.signal(0)
-    #   spy = Spy.new { a.value }
-    #   dispose = S.effect(&spy)
-    #   spy.reset_history!
-    #
-    #   S.batch do
-    #     a.value = 1
-    #     dispose()
-    #     a.value = 2
-    #   end
-    #
-    #   assert_equal(0, spy.called_times)
-    # end
+    it "should batch writes" do
+      a = S.signal("a")
+      spy = Spy.new { a.value }
+      S.effect(&spy)
+      spy.reset_history!
+
+      S.effect do
+        a.value = "aa"
+        a.value = "aaa"
+      end
+
+      assert_equal(1, spy.called_times)
+    end
+
+    it "should call the cleanup callback before the next run" do
+      a = S.signal(0)
+      spy = Spy.new {}
+
+      S.effect do
+        a.value
+        spy
+      end
+      assert_equal(0, spy.called_times)
+      a.value = 1
+      assert_equal(1, spy.called_times)
+      a.value = 2
+      assert_equal(2, spy.called_times)
+    end
+
+    it "should call only the callback from the previous run" do
+      spy1 = Spy.new {}
+      spy2 = Spy.new {}
+      spy3 = Spy.new {}
+      a = S.signal(spy1)
+
+      S.effect do
+        a.value
+      end
+
+      assert_equal(0, spy1.called_times)
+      assert_equal(0, spy2.called_times)
+      assert_equal(0, spy3.called_times)
+
+      a.value = spy2
+      assert_equal(1, spy1.called_times)
+      assert_equal(0, spy2.called_times)
+      assert_equal(0, spy3.called_times)
+
+      a.value = spy3
+      assert_equal(1, spy1.called_times)
+      assert_equal(1, spy2.called_times)
+      assert_equal(0, spy3.called_times)
+    end
+
+    it "should call the cleanup callback function when disposed" do
+      spy = Spy.new {}
+
+      dispose = S.effect do
+        spy
+      end
+      assert_equal(0, spy.called_times)
+      dispose.call
+      assert_equal(1, spy.called_times)
+    end
+
+    it "should not recompute if the effect has been notified about changes, but no direct dependency has actually changed" do
+      s = S.signal(0)
+      c = S.computed do
+        s.value
+        0
+      end
+      spy = Spy.new do
+        c.value
+      end
+      S.effect(&spy)
+      assert_equal(1, spy.called_times)
+      spy.reset_history!
+
+      s.value = 1
+      assert_equal(0, spy.called_times)
+    end
+
+    it "should not recompute dependencies unnecessarily" do
+      spy = Spy.new {}
+      a = S.signal(0)
+      b = S.signal(0)
+      c = S.computed do
+        b.value
+        spy.call
+      end
+      S.effect do
+        if a.value == 0
+          c.value
+        end
+      end
+      assert_equal(1, spy.called_times)
+
+      S.batch do
+        b.value = 1
+        a.value = 1
+      end
+      assert_equal(1, spy.called_times)
+    end
+
+    it "should not recompute dependencies out of order" do
+      a = S.signal(1)
+      b = S.signal(1)
+      c = S.signal(1)
+
+      spy = Spy.new { c.value }
+      d = S.computed(&spy)
+
+      S.effect do
+        if a.value > 0
+          b.value
+          d.value
+        else
+          b.value
+        end
+      end
+      spy.reset_history!
+
+      S.batch do
+        a.value = 2
+        b.value = 2
+        c.value = 2
+      end
+      assert_equal(1, spy.called_times)
+      spy.reset_history!
+
+      S.batch do
+        a.value = -1
+        b.value = -1
+        c.value = -1
+      end
+      assert_equal(0, spy.called_times)
+      spy.reset_history!
+    end
+
+    it "should recompute if a dependency changes during computation after becoming a dependency" do
+      a = S.signal(0)
+      spy = Spy.new do
+        if a.value == 0
+          a.value += 1
+        end
+      end
+      S.effect(&spy)
+      assert_equal(2, spy.called_times)
+    end
+
+    it "should run the cleanup in an implicit batch" do
+      a = S.signal(0)
+      b = S.signal("a")
+      c = S.signal("b")
+      spy = Spy.new {}
+
+      S.effect do
+        b.value
+        c.value
+        spy.call(b.value + c.value)
+      end
+
+      S.effect do
+        a.value
+        ->() do
+          b.value = "x"
+          c.value = "y"
+        end
+      end
+
+      assert_equal(1, spy.called_times)
+      spy.reset_history!
+
+      a.value = 1
+      assert_equal(1, spy.called_times)
+      assert_equal(["xy"], spy.called_with)
+    end
+
+    it "should not retrigger the effect if the cleanup modifies one of the dependencies" do
+      a = S.signal(0)
+      spy = Spy.new {}
+
+      S.effect do
+        spy.call(a.value)
+        ->() do
+          a.value = 2
+        end
+      end
+      assert_equal(1, spy.called_times)
+      spy.reset_history!
+
+      a.value = 1
+      assert_equal(1, spy.called_times)
+      assert_equal([2], spy.called_with)
+    end
+
+    it "should run the cleanup if the effect disposes itself" do
+      a = S.signal(0)
+      spy = Spy.new {}
+
+      dispose = S.effect do
+        if a.value > 0
+          dispose.call
+          spy
+        end
+      end
+      assert_equal(0, spy.called_times)
+      a.value = 1
+      assert_equal(1, spy.called_times)
+      a.value = 2
+      assert_equal(1, spy.called_times)
+    end
+
+    it "should not run the effect if the cleanup function disposes it" do
+      a = S.signal(0)
+      spy = Spy.new {}
+
+      dispose = S.effect do
+        a.value
+        spy.call
+        ->() do
+          dispose.call
+        end
+      end
+      assert_equal(1, spy.called_times)
+      a.value = 1
+      assert_equal(1, spy.called_times)
+    end
+
+    it "should not subscribe to anything if first run throws" do
+      s = S.signal(0)
+      spy = Spy.new do
+        s.value
+        raise "test"
+      end
+      e = assert_raises(RuntimeError) { S.effect(&spy) }
+      assert_equal("test", e.message)
+      assert_equal(1, spy.called_times)
+
+      s.value += 1
+      assert_equal(1, spy.called_times)
+    end
+
+    it "should reset the cleanup if the effect throws" do
+      a = S.signal(0)
+      spy = Spy.new {}
+
+      S.effect do
+        if a.value == 0
+          spy
+        else
+          raise "hello"
+        end
+      end
+      assert_equal(0, spy.called_times)
+      e = assert_raises(RuntimeError) { S.effect(&spy) }
+      assert_equal("test", e.message)
+      assert_equal(1, spy.called_times)
+      a.value = 0
+      assert_equal(1, spy.called_times)
+    end
+
+    it "should dispose the effect if the cleanup callback throws" do
+      a = S.signal(0)
+      spy = Spy.new {}
+
+      S.effect do
+        if a.value == 0
+          ->() do
+            raise "hello"
+          end
+        else
+          spy.call
+        end
+      end
+      assert_equal(0, spy.called_times)
+      e = assert_raises(RuntimeError) { a.value += 1 }
+      assert_equal("hello", e.message)
+      assert_equal(0, spy.called_times)
+      a.value += 1
+      assert_equal(0, spy.called_times)
+    end
+
+    it "should run cleanups outside any evaluation context" do
+      spy = Spy.new {}
+      a = S.signal(0)
+      b = S.signal(0)
+      c = S.computed do
+        if a.value == 0
+          S.effect do
+            ->() do
+              b.value
+            end
+          end
+        end
+        a.value
+      end
+
+      S.effect do
+        spy.call
+        c.value
+      end
+      assert_equal(1, spy.called_times)
+      spy.reset_history!
+
+      a.value = 1
+      assert_equal(1, spy.called_times)
+      spy.reset_history!
+
+      b.value = 1
+      assert_equal(0, spy.called_times)
+    end
+
+    it "should throw on cycles" do
+      a = S.signal(0)
+      i = 0
+
+      fn = ->() do
+        S.effect do
+          # Prevent test suite from spinning if limit is not hit
+          if (i += 1) > 200
+            raise "test failed"
+          end
+          a.value
+          a.value = Float::NAN
+        end
+      end
+
+      assert_raises(Mayu::Signals::Core::CycleDetectedError, &fn)
+    end
+
+    it "should throw on indirect cycles" do
+      a = S.signal(0)
+      i = 0
+
+      c = S.computed do
+        a.value
+        a.value = Float::NAN
+        Float::NAN
+      end
+
+      fn = ->() do
+        S.effect do
+          # Prevent test suite from spinning if limit is not hit
+          if (i += 1) > 200
+            raise "test failed"
+          end
+          c.value
+        end
+      end
+
+      assert_raises(Mayu::Signals::Core::CycleDetectedError, &fn)
+    end
+
+    it "should allow disposing the effect multiple times" do
+      dispose = S.effect { nil }
+      dispose.call
+      begin
+        dispose.call
+      rescue => e
+        assert(true, "the previous line should not raise")
+      end
+    end
+
+    it "should allow disposing a running effect" do
+      a = S.signal(0)
+      spy = Spy.new {}
+      dispose = S.effect do
+        if a.value == 1
+          dispose.call
+          spy.call
+        end
+      end
+      assert_equal(0, spy.called_times)
+      a.value = 1
+      assert_equal(1, spy.called_times)
+      a.value = 2
+      assert_equal(1, spy.called_times)
+    end
+
+    it "should not run if it's first been triggered and then disposed in a batch" do
+      a = S.signal(0)
+      spy = Spy.new { a.value }
+      dispose = S.effect(&spy)
+      spy.reset_history!
+
+      S.batch do
+        a.value = 1
+        dispose.call
+      end
+
+      assert_equal(0, spy.called_times)
+    end
+
+    it "should not run if it's been triggered, disposed and then triggered again in a batch" do
+      a = S.signal(0)
+      spy = Spy.new { a.value }
+      dispose = S.effect(&spy)
+      spy.reset_history!
+
+      S.batch do
+        a.value = 1
+        dispose.call
+        a.value = 2
+      end
+
+      assert_equal(0, spy.called_times)
+    end
   end
 
   describe "internals" do
@@ -680,7 +692,7 @@ describe "Signals" do
     #   effect(function (this: any) {
     #     e = this
     #     a.value
-    #     oldSpy()
+    #     oldspy.call
     #   end
     #   oldSpy.reset_history!
     #
@@ -776,7 +788,7 @@ describe "Signals" do
     #   expect(spy).to.be.called
     #   spy.reset_history!
     #
-    #   e._dispose()
+    #   e._dispose.call
     #   s.value = 3
     #   assert_equal(0, spy.called_times)
     # end
@@ -791,7 +803,7 @@ describe "Signals" do
     #
     #   spy = Spy.new {}
     #   e._callback = spy
-    #   e._dispose()
+    #   e._dispose.call
     #
     #   done = e._start()
     #   begin)
@@ -832,7 +844,7 @@ describe "Signals" do
     #   end
     #   expect(e._sources).not.to.be.undefined
     #
-    #   e._dispose()
+    #   e._dispose.call
     #   assert_nil(e._sources)
     # end
   end
@@ -1026,15 +1038,15 @@ describe "Signals" do
         assert_equal(1, c.peek)
       end
 
-      # it "should refresh value if stale" do
-      #   a = S.signal(1)
-      #   b = S.computed { a.value }
-      #   assert_equal(1, b.peek)
-      #
-      #   a.value = 2
-      #   assert_equal(2, b.peek)
-      # end
-      #
+      it "should refresh value if stale" do
+        a = S.signal(1)
+        b = S.computed { a.value }
+        assert_equal(1, b.peek)
+
+        a.value = 2
+        assert_equal(2, b.peek)
+      end
+
       # it "should detect simple dependency cycles" do
       #   a: Signal = S.computed { a.peek }
       #   expect(() => a.peek).to.throw(/Cycle detected/)
@@ -1051,7 +1063,7 @@ describe "Signals" do
       # it "should not make surrounding effect depend on the computed" do
       #   s = S.signal(1)
       #   c = S.computed { s.value }
-      #   spy = sinon.spy( do
+      #   spy = Spy.new do
       #     c.peek()
       #   end
       #
@@ -1066,11 +1078,11 @@ describe "Signals" do
       #   s = S.signal(1)
       #   c = S.computed { s.value }
       #
-      #   spy = sinon.spy( do
+      #   spy = Spy.new do
       #     c.peek()
       #   end
       #
-      #   d = computed(spy)
+      #   d = S.computed(spy)
       #   d.value
       #   assert_equal(1, spy.called_times)
       #
@@ -1084,8 +1096,8 @@ describe "Signals" do
       #   b = S.computed { a.value }
       #   spy = Spy.new {}
       #   S.effect do
-      #     spy()
-      #     b.peek()
+      #     spy.call
+      #     b.peek
       #   end
       #   assert_equal(1, spy.called_times)
       #   spy.reset_history!
@@ -1099,8 +1111,8 @@ describe "Signals" do
       #   b = S.computed { a.value }
       #   spy = Spy.new {}
       #   d = S.computed do
-      #     spy()
-      #     b.peek()
+      #     spy.call
+      #     b.peek
       #   end
       #   d.value
       #   assert_equal(1, spy.called_times)
@@ -1113,7 +1125,7 @@ describe "Signals" do
     end
 
     describe "garbage collection" do
-      # // Skip GC tests if window.gc/global.gc is not defined.
+      # # Skip GC tests if window.gc/global.gc is not defined.
       # before(function () {
       #   if typeof gc == "undefined"
       #     this.skip()
@@ -1140,7 +1152,7 @@ describe "Signals" do
       #     dispose = S.effect { c.value }
       #   })()
       #
-      #   dispose()
+      #   dispose.call
       #   (gc as () => void)()
       #   await new Promise(resolve => setTimeout(resolve, 0))
       #   expect(ref.deref()).to.be.undefined
@@ -1152,11 +1164,11 @@ describe "Signals" do
       #   a = S.signal("a")
       #   b = S.signal("b")
       #
-      #   compute = sinon.spy( do
-      #     // debugger
-      #     return a.value + b.value
+      #   compute = Spy.new do
+      #     # binding.pry
+      #     a.value + b.value
       #   end
-      #   c = computed(compute)
+      #   c = S.computed(compute)
       #
       #   assert_equal("ab", c.value)
       #   expect(compute).to.have.been.calledOnce
@@ -1169,22 +1181,22 @@ describe "Signals" do
       # end
       #
       # it "should drop A->B->A updates", async  do
-      #   //     A
-      #   //   / |
-      #   //  B  | <- Looks like a flag doesn't it? :D
-      #   //   \ |
-      #   //     C
-      #   //     |
-      #   //     D
+      #   #     A
+      #   #   / |
+      #   #  B  | <- Looks like a flag doesn't it? :D
+      #   #   \ |
+      #   #     C
+      #   #     |
+      #   #     D
       #   a = S.signal(2)
       #
       #   b = S.computed { a.value - 1 }
       #   c = S.computed { a.value + b.value }
       #
       #   compute = Spy.new { "d: " + c.value }
-      #   d = computed(compute)
+      #   d = S.computed(compute)
       #
-      #   // Trigger read
+      #   # Trigger read
       #   assert_equal("d: 3", d.value)
       #   expect(compute).to.have.been.calledOnce
       #   compute.reset_history!
@@ -1195,37 +1207,37 @@ describe "Signals" do
       # end
       #
       # it "should only update every signal once (diamond graph)" do
-      #   // In this scenario "D" should only update once when "A" receives
-      #   // an update. This is sometimes referred to as the "diamond" scenario.
-      #   //     A
-      #   //   /   \
-      #   //  B     C
-      #   //   \   /
-      #   //     D
+      #   # In this scenario "D" should only update once when "A" receives
+      #   # an update. This is sometimes referred to as the "diamond" scenario.
+      #   #     A
+      #   #   /   \
+      #   #  B     C
+      #   #   \   /
+      #   #     D
       #   a = S.signal("a")
       #   b = S.computed { a.value }
       #   c = S.computed { a.value }
       #
       #   spy = Spy.new { b.value + " " + c.value }
-      #   d = computed(spy)
+      #   d = S.computed(spy)
       #
       #   assert_equal("a a", d.value)
       #   assert_equal(1, spy.called_times)
       #
       #   a.value = "aa"
       #   assert_equal("aa aa", d.value)
-      #   expect(spy).to.be.calledTwice
+      #   assert_equal(2, spy.called_times)
       # end
       #
       # it "should only update every signal once (diamond graph + tail)" do
-      #   // "E" will be likely updated twice if our mark+sweep logic is buggy.
-      #   //     A
-      #   //   /   \
-      #   //  B     C
-      #   //   \   /
-      #   //     D
-      #   //     |
-      #   //     E
+      #   # "E" will be likely updated twice if our mark+sweep logic is buggy.
+      #   #     A
+      #   #   /   \
+      #   #  B     C
+      #   #   \   /
+      #   #     D
+      #   #     |
+      #   #     E
       #   a = S.signal("a")
       #   b = S.computed { a.value }
       #   c = S.computed { a.value }
@@ -1233,27 +1245,27 @@ describe "Signals" do
       #   d = S.computed { b.value + " " + c.value }
       #
       #   spy = Spy.new { d.value }
-      #   e = computed(spy)
+      #   e = S.computed(spy)
       #
       #   assert_equal("a a", e.value)
       #   assert_equal(1, spy.called_times)
       #
       #   a.value = "aa"
       #   assert_equal("aa aa", e.value)
-      #   expect(spy).to.be.calledTwice
+      #   assert_equal(2, spy.called_times)
       # end
       #
       # it "should bail out if result is the same" do
-      #   // Bail out if value of "B" never changes
-      #   // A->B->C
+      #   # Bail out if value of "B" never changes
+      #   # A->B->C
       #   a = S.signal("a")
       #   b = S.computed do
       #     a.value
-      #     return "foo"
+      #     "foo"
       #   end
       #
       #   spy = Spy.new { b.value }
-      #   c = computed(spy)
+      #   c = S.computed(spy)
       #
       #   assert_equal("foo", c.value)
       #   assert_equal(1, spy.called_times)
@@ -1264,16 +1276,16 @@ describe "Signals" do
       # end
       #
       # it "should only update every signal once (jagged diamond graph + tails)" do
-      #   // "F" and "G" will be likely updated twice if our mark+sweep logic is buggy.
-      #   //     A
-      #   //   /   \
-      #   //  B     C
-      #   //  |     |
-      #   //  |     D
-      #   //   \   /
-      #   //     E
-      #   //   /   \
-      #   //  F     G
+      #   # "F" and "G" will be likely updated twice if our mark+sweep logic is buggy.
+      #   #     A
+      #   #   /   \
+      #   #  B     C
+      #   #  |     |
+      #   #  |     D
+      #   #   \   /
+      #   #     E
+      #   #   /   \
+      #   #  F     G
       #   a = S.signal("a")
       #
       #   b = S.computed { a.value }
@@ -1282,12 +1294,12 @@ describe "Signals" do
       #   d = S.computed { c.value }
       #
       #   eSpy = Spy.new { b.value + " " + d.value }
-      #   e = computed(eSpy)
+      #   e = S.computed(eSpy)
       #
       #   fSpy = Spy.new { e.value }
-      #   f = computed(fSpy)
+      #   f = S.computed(fSpy)
       #   gSpy = Spy.new { e.value }
-      #   g = computed(gSpy)
+      #   g = S.computed(gSpy)
       #
       #   assert_equal("a a", f.value)
       #   assert_equal(1, fSpy.called_times)
@@ -1325,16 +1337,16 @@ describe "Signals" do
       #   assert_equal("c c", g.value)
       #   assert_equal(1, gSpy.called_times)
       #
-      #   // top to bottom
+      #   # top to bottom
       #   expect(eSpy).to.have.been.calledBefore(fSpy)
-      #   // left to right
+      #   # left to right
       #   expect(fSpy).to.have.been.calledBefore(gSpy)
       # end
       #
       # it "should only subscribe to signals listened to" do
-      #   //    *A
-      #   //   /   \
-      #   // *B     C <- we don't listen to C
+      #   #    *A
+      #   #   /   \
+      #   # *B     C <- we don't listen to C
       #   a = S.signal("a")
       #
       #   b = S.computed { a.value }
@@ -1350,20 +1362,20 @@ describe "Signals" do
       # end
       #
       # it "should only subscribe to signals listened to" do
-      #   // Here both "B" and "C" are active in the beginning, but
-      #   // "B" becomes inactive later. At that point it should
-      #   // not receive any updates anymore.
-      #   //    *A
-      #   //   /   \
-      #   // *B     D <- we don't listen to C
-      #   //  |
-      #   // *C
+      #   # Here both "B" and "C" are active in the beginning, but
+      #   # "B" becomes inactive later. At that point it should
+      #   # not receive any updates anymore.
+      #   #    *A
+      #   #   /   \
+      #   # *B     D <- we don't listen to C
+      #   #  |
+      #   # *C
       #   a = S.signal("a")
       #   spyB = Spy.new { a.value }
-      #   b = computed(spyB)
+      #   b = S.computed(spyB)
       #
-      #   spyC = Spy.new { b.value }
-      #   c = computed(spyC)
+      #   spy_c = Spy.new { b.value }
+      #   c = S.computed(spy_c)
       #
       #   d = S.computed { a.value }
       #
@@ -1374,34 +1386,34 @@ describe "Signals" do
       #   assert_equal("a", d.value)
       #
       #   spyB.reset_history!
-      #   spyC.reset_history!
+      #   spy_c.reset_history!
       #   unsub()
       #
       #   a.value = "aa"
       #
       #   assert_equal(0, spyB.called_times)
-      #   assert_equal(0, spyC.called_times)
+      #   assert_equal(0, spy_c.called_times)
       #   assert_equal("aa", d.value)
       # end
       #
       # it "should ensure subs update even if one dep unmarks it" do
-      #   // In this scenario "C" always returns the same value. When "A"
-      #   // changes, "B" will update, then "C" at which point its update
-      #   // to "D" will be unmarked. But "D" must still update because
-      #   // "B" marked it. If "D" isn't updated, then we have a bug.
-      #   //     A
-      #   //   /   \
-      #   //  B     *C <- returns same value every time
-      #   //   \   /
-      #   //     D
+      #   # In this scenario "C" always returns the same value. When "A"
+      #   # changes, "B" will update, then "C" at which point its update
+      #   # to "D" will be unmarked. But "D" must still update because
+      #   # "B" marked it. If "D" isn't updated, then we have a bug.
+      #   #     A
+      #   #   /   \
+      #   #  B     *C <- returns same value every time
+      #   #   \   /
+      #   #     D
       #   a = S.signal("a")
       #   b = S.computed { a.value }
       #   c = S.computed do
       #     a.value
-      #     return "c"
+      #     "c"
       #   end
       #   spy = Spy.new { b.value + " " + c.value }
-      #   d = computed(spy)
+      #   d = S.computed(spy)
       #   assert_equal("a c", d.value)
       #   spy.reset_history!
       #
@@ -1411,26 +1423,26 @@ describe "Signals" do
       # end
       #
       # it "should ensure subs update even if two deps unmark it" do
-      #   // In this scenario both "C" and "D" always return the same
-      #   // value. But "E" must still update because "A"  marked it.
-      #   // If "E" isn't updated, then we have a bug.
-      #   //     A
-      #   //   / | \
-      #   //  B *C *D
-      #   //   \ | /
-      #   //     E
+      #   # In this scenario both "C" and "D" always return the same
+      #   # value. But "E" must still update because "A"  marked it.
+      #   # If "E" isn't updated, then we have a bug.
+      #   #     A
+      #   #   / | \
+      #   #  B *C *D
+      #   #   \ | /
+      #   #     E
       #   a = S.signal("a")
       #   b = S.computed { a.value }
       #   c = S.computed do
       #     a.value
-      #     return "c"
+      #     "c"
       #   end
       #   d = S.computed do
       #     a.value
-      #     return "d"
+      #     "d"
       #   end
       #   spy = Spy.new { b.value + " " + c.value + " " + d.value }
-      #   e = computed(spy)
+      #   e = S.computed(spy)
       #   assert_equal("a c d", e.value)
       #   spy.reset_history!
       #
@@ -1463,7 +1475,7 @@ describe "Signals" do
       #   a = S.signal(0)
       #   b = S.computed do
       #     if (a.value == 1) raise "fail"
-      #     return a.value
+      #     a.value
       #   end
       #   c = S.computed { b.value }
       #   assert_equal(0, c.value)
@@ -1489,24 +1501,24 @@ describe "Signals" do
       # end
       #
       # it "should not update a sub if all deps unmark it" do
-      #   // In this scenario "B" and "C" always return the same value. When "A"
-      #   // changes, "D" should not update.
-      #   //     A
-      #   //   /   \
-      #   // *B     *C
-      #   //   \   /
-      #   //     D
+      #   # In this scenario "B" and "C" always return the same value. When "A"
+      #   # changes, "D" should not update.
+      #   #     A
+      #   #   /   \
+      #   # *B     *C
+      #   #   \   /
+      #   #     D
       #   a = S.signal("a")
       #   b = S.computed do
       #     a.value
-      #     return "b"
+      #     "b"
       #   end
       #   c = S.computed do
       #     a.value
-      #     return "c"
+      #     "c"
       #   end
       #   spy = Spy.new { b.value + " " + c.value }
-      #   d = computed(spy)
+      #   d = S.computed(spy)
       #   assert_equal("b c", d.value)
       #   spy.reset_history!
       #
@@ -1571,8 +1583,8 @@ describe "Signals" do
     #     b.value += " outer"
     #   end
     #
-    #   // If the inner batch) would have flushed the update
-    #   // this spy would've been called twice.
+    #   # If the inner batch) would have flushed the update
+    #   # this spy would've been called twice.
     #   assert_equal(1, spy.called_times)
     # end
     #
@@ -1589,45 +1601,45 @@ describe "Signals" do
     # end
     #
     # it "should read computed signals with updated source signals" do
-    #   // A->B->C->D->E
+    #   # A->B->C->D->E
     #   a = S.signal("a")
     #   b = S.computed { a.value }
     #
-    #   spyC = Spy.new { b.value }
-    #   c = computed(spyC)
+    #   spy_c = Spy.new { b.value }
+    #   c = S.computed(spy_c)
     #
-    #   spyD = Spy.new { c.value }
-    #   d = computed(spyD)
+    #   spy_d = Spy.new { c.value }
+    #   d = S.computed(spy_d)
     #
-    #   spyE = Spy.new { d.value }
-    #   e = computed(spyE)
+    #   spy_e = Spy.new { d.value }
+    #   e = S.computed(spy_e)
     #
-    #   spyC.reset_history!
-    #   spyD.reset_history!
-    #   spyE.reset_history!
+    #   spy_c.reset_history!
+    #   spy_d.reset_history!
+    #   spy_e.reset_history!
     #
     #   result = ""
     #   S.batch do
     #     a.value = "aa"
     #     result = c.value
     #
-    #     // Since "D" isn't accessed during batching, we should not
-    #     // update it, only after batching has completed
-    #     assert_equal(0, spyD.called_times)
+    #     # Since "D" isn't accessed during batching, we should not
+    #     # update it, only after batching has completed
+    #     assert_equal(0, spy_d.called_times)
     #   end
     #
     #   assert_equal("aa", result)
     #   assert_equal("aa", d.value)
     #   assert_equal("aa", e.value)
-    #   assert_equal(1, spyC.called_times)
-    #   assert_equal(1, spyD.called_times)
-    #   assert_equal(1, spyE.called_times)
+    #   assert_equal(1, spy_c.called_times)
+    #   assert_equal(1, spy_d.called_times)
+    #   assert_equal(1, spy_e.called_times)
     # end
     #
     # it "should not block writes after batching completed" do
-    #   // If no further writes after batch) are possible, than we
-    #   // didn't restore state properly. Most likely "pending" still
-    #   // holds elements that are already processed.
+    #   # If no further writes after batch) are possible, than we
+    #   # didn't restore state properly. Most likely "pending" still
+    #   # holds elements that are already processed.
     #   a = S.signal("a")
     #   b = S.signal("b")
     #   c = S.signal("c")
