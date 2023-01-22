@@ -634,7 +634,7 @@ module Mayu
           S.batch do
             Core.with_eval_context(self) do
               unless @flags.set?(Flags::DISPOSED)
-                @cleanup = @compute.call if @compute
+                @cleanup = @compute&.call
               end
             ensure
               Core.cleanup_sources(self)

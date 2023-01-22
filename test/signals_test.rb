@@ -282,8 +282,9 @@ describe "Signals" do
 
       S.effect do
         a.value
-        spy
+        spy.to_proc
       end
+
       assert_equal(0, spy.called_times)
       a.value = 1
       assert_equal(1, spy.called_times)
@@ -298,7 +299,7 @@ describe "Signals" do
       a = S.signal(spy1)
 
       S.effect do
-        a.value
+        a.value.to_proc
       end
 
       assert_equal(0, spy1.called_times)
@@ -320,8 +321,9 @@ describe "Signals" do
       spy = Spy.new {}
 
       dispose = S.effect do
-        spy
+        spy.to_proc
       end
+
       assert_equal(0, spy.called_times)
       dispose.call
       assert_equal(1, spy.called_times)
@@ -465,7 +467,9 @@ describe "Signals" do
       dispose = S.effect do
         if a.value > 0
           dispose.call
-          spy
+          spy.to_proc
+        else
+          nil
         end
       end
       assert_equal(0, spy.called_times)
@@ -511,14 +515,14 @@ describe "Signals" do
 
       S.effect do
         if a.value == 0
-          spy
+          spy.to_proc
         else
           raise "hello"
         end
       end
       assert_equal(0, spy.called_times)
-      e = assert_raises(RuntimeError) { S.effect(&spy) }
-      assert_equal("test", e.message)
+      e = assert_raises(RuntimeError) { a.value = 1 }
+      assert_equal("hello", e.message)
       assert_equal(1, spy.called_times)
       a.value = 0
       assert_equal(1, spy.called_times)
