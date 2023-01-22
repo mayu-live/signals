@@ -1164,121 +1164,121 @@ describe "Signals" do
     end
 
     describe "graph updates" do
-      # it "should run computeds once for multiple dep changes", async  do
-      #   a = S.signal("a")
-      #   b = S.signal("b")
-      #
-      #   compute = Spy.new do
-      #     # binding.pry
-      #     a.value + b.value
-      #   end
-      #   c = S.computed(compute)
-      #
-      #   assert_equal("ab", c.value)
-      #   expect(compute).to.have.been.calledOnce
-      #   compute.reset_history!
-      #
-      #   a.value = "aa"
-      #   b.value = "bb"
-      #   c.value
-      #   expect(compute).to.have.been.calledOnce
-      # end
-      #
-      # it "should drop A->B->A updates", async  do
-      #   #     A
-      #   #   / |
-      #   #  B  | <- Looks like a flag doesn't it? :D
-      #   #   \ |
-      #   #     C
-      #   #     |
-      #   #     D
-      #   a = S.signal(2)
-      #
-      #   b = S.computed { a.value - 1 }
-      #   c = S.computed { a.value + b.value }
-      #
-      #   compute = Spy.new { "d: " + c.value }
-      #   d = S.computed(compute)
-      #
-      #   # Trigger read
-      #   assert_equal("d: 3", d.value)
-      #   expect(compute).to.have.been.calledOnce
-      #   compute.reset_history!
-      #
-      #   a.value = 4
-      #   d.value
-      #   expect(compute).to.have.been.calledOnce
-      # end
-      #
-      # it "should only update every signal once (diamond graph)" do
-      #   # In this scenario "D" should only update once when "A" receives
-      #   # an update. This is sometimes referred to as the "diamond" scenario.
-      #   #     A
-      #   #   /   \
-      #   #  B     C
-      #   #   \   /
-      #   #     D
-      #   a = S.signal("a")
-      #   b = S.computed { a.value }
-      #   c = S.computed { a.value }
-      #
-      #   spy = Spy.new { b.value + " " + c.value }
-      #   d = S.computed(&spy)
-      #
-      #   assert_equal("a a", d.value)
-      #   assert_equal(1, spy.called_times)
-      #
-      #   a.value = "aa"
-      #   assert_equal("aa aa", d.value)
-      #   assert_equal(2, spy.called_times)
-      # end
-      #
-      # it "should only update every signal once (diamond graph + tail)" do
-      #   # "E" will be likely updated twice if our mark+sweep logic is buggy.
-      #   #     A
-      #   #   /   \
-      #   #  B     C
-      #   #   \   /
-      #   #     D
-      #   #     |
-      #   #     E
-      #   a = S.signal("a")
-      #   b = S.computed { a.value }
-      #   c = S.computed { a.value }
-      #
-      #   d = S.computed { b.value + " " + c.value }
-      #
-      #   spy = Spy.new { d.value }
-      #   e = S.computed(&spy)
-      #
-      #   assert_equal("a a", e.value)
-      #   assert_equal(1, spy.called_times)
-      #
-      #   a.value = "aa"
-      #   assert_equal("aa aa", e.value)
-      #   assert_equal(2, spy.called_times)
-      # end
-      #
-      # it "should bail out if result is the same" do
-      #   # Bail out if value of "B" never changes
-      #   # A->B->C
-      #   a = S.signal("a")
-      #   b = S.computed do
-      #     a.value
-      #     "foo"
-      #   end
-      #
-      #   spy = Spy.new { b.value }
-      #   c = S.computed(&spy)
-      #
-      #   assert_equal("foo", c.value)
-      #   assert_equal(1, spy.called_times)
-      #
-      #   a.value = "aa"
-      #   assert_equal("foo", c.value)
-      #   assert_equal(1, spy.called_times)
-      # end
-      #
+      it "should run computeds once for multiple dep changes" do
+        a = S.signal("a")
+        b = S.signal("b")
+
+        compute = Spy.new do
+          # binding.pry
+          a.value + b.value
+        end
+        c = S.computed(&compute)
+
+        assert_equal("ab", c.value)
+        assert(1, compute.called_times)
+        compute.reset_history!
+
+        a.value = "aa"
+        b.value = "bb"
+        c.value
+        assert(1, compute.called_times)
+      end
+
+      it "should drop A->B->A updates"  do
+        #     A
+        #   / |
+        #  B  | <- Looks like a flag doesn't it? :D
+        #   \ |
+        #     C
+        #     |
+        #     D
+        a = S.signal(2)
+
+        b = S.computed { a.value - 1 }
+        c = S.computed { a.value + b.value }
+
+        compute = Spy.new { "d: #{c.value}" }
+        d = S.computed(&compute)
+
+        # Trigger read
+        assert_equal("d: 3", d.value)
+        assert(1, compute.called_times)
+        compute.reset_history!
+
+        a.value = 4
+        d.value
+        assert(1, compute.called_times)
+      end
+
+      it "should only update every signal once (diamond graph)" do
+        # In this scenario "D" should only update once when "A" receives
+        # an update. This is sometimes referred to as the "diamond" scenario.
+        #     A
+        #   /   \
+        #  B     C
+        #   \   /
+        #     D
+        a = S.signal("a")
+        b = S.computed { a.value }
+        c = S.computed { a.value }
+
+        spy = Spy.new { b.value + " " + c.value }
+        d = S.computed(&spy)
+
+        assert_equal("a a", d.value)
+        assert_equal(1, spy.called_times)
+
+        a.value = "aa"
+        assert_equal("aa aa", d.value)
+        assert_equal(2, spy.called_times)
+      end
+
+      it "should only update every signal once (diamond graph + tail)" do
+        # "E" will be likely updated twice if our mark+sweep logic is buggy.
+        #     A
+        #   /   \
+        #  B     C
+        #   \   /
+        #     D
+        #     |
+        #     E
+        a = S.signal("a")
+        b = S.computed { a.value }
+        c = S.computed { a.value }
+
+        d = S.computed { b.value + " " + c.value }
+
+        spy = Spy.new { d.value }
+        e = S.computed(&spy)
+
+        assert_equal("a a", e.value)
+        assert_equal(1, spy.called_times)
+
+        a.value = "aa"
+        assert_equal("aa aa", e.value)
+        assert_equal(2, spy.called_times)
+      end
+
+      it "should bail out if result is the same" do
+        # Bail out if value of "B" never changes
+        # A->B->C
+        a = S.signal("a")
+        b = S.computed do
+          a.value
+          "foo"
+        end
+
+        spy = Spy.new { b.value }
+        c = S.computed(&spy)
+
+        assert_equal("foo", c.value)
+        assert_equal(1, spy.called_times)
+
+        a.value = "aa"
+        assert_equal("foo", c.value)
+        assert_equal(1, spy.called_times)
+      end
+
       # it "should only update every signal once (jagged diamond graph + tails)" do
       #   # "F" and "G" will be likely updated twice if our mark+sweep logic is buggy.
       #   #     A
