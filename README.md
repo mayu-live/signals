@@ -13,6 +13,7 @@ Contributions are welcome!
 There's no gem. Figure it out.
 
 - [Guide / API](#guide--api)
+  - [`Helpers`](#helpers)
   - [`root(&)`](#root)
   - [`signal(initial_value)`](#signalinitialvalue)
     - [`signal.peek`](#signalpeek)
@@ -24,6 +25,28 @@ There's no gem. Figure it out.
 ## Guide / API
 
 The signals library exposes five methods which are the building blocks to model any business logic you can think of.
+
+### Helpers
+
+To get access to the helper methods, just include `Mayu::Signals::Helpers`.
+
+```ruby
+include Mayu::Signals::Helpers
+a = signal(0)
+b = signal(0)
+c = computed { a.value + b.value }
+e = effect { puts "c: #{c.value}" }
+```
+
+If you prefer to not include a bunch of methods, you can also use `Mayu::Signals::S`.
+
+```ruby
+S = Mayu::Signals::S
+a = S.signal(0)
+b = S.signal(0)
+c = S.computed { a.value + b.value }
+e = S.effect { puts "c: #{c.value}" }
+```
 
 ### `root(&)`
 
