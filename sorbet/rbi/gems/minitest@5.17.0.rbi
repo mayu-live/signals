@@ -10,6 +10,14 @@
 # source://yard/0.9.28/lib/yard.rb#62
 ::RUBY19 = T.let(T.unsafe(nil), TrueClass)
 
+# source://minitest//lib/minitest/test_task.rb#292
+class Integer < ::Numeric
+  # source://minitest//lib/minitest/test_task.rb#293
+  def threads_do(jobs); end
+end
+
+Integer::GMP_VERSION = T.let(T.unsafe(nil), String)
+
 # Kernel extensions for minitest
 #
 # source://minitest//lib/minitest/spec.rb#46
@@ -301,6 +309,11 @@ module Minitest::Assertions
   #
   # source://minitest//lib/minitest/assertions.rb#291
   def assert_match(matcher, obj, msg = T.unsafe(nil)); end
+
+  # Assert that the mock verifies correctly.
+  #
+  # source://minitest//lib/minitest/mock.rb#248
+  def assert_mock(mock); end
 
   # Fails unless +obj+ is nil
   #
@@ -978,6 +991,106 @@ module Minitest::Guard
   #
   # source://minitest//lib/minitest.rb#1017
   def windows?(platform = T.unsafe(nil)); end
+end
+
+# A simple and clean mock object framework.
+#
+# All mock objects are an instance of Mock
+#
+# source://minitest//lib/minitest/mock.rb#10
+class Minitest::Mock
+  # @return [Mock] a new instance of Mock
+  #
+  # source://minitest//lib/minitest/mock.rb#48
+  def initialize(delegator = T.unsafe(nil)); end
+
+  # source://minitest//lib/minitest/mock.rb#31
+  def ===(*args, **kwargs, &b); end
+
+  # source://minitest//lib/minitest/mock.rb#120
+  def __call(name, data); end
+
+  def __respond_to?(*_arg0); end
+
+  # source://minitest//lib/minitest/mock.rb#31
+  def class(*args, **kwargs, &b); end
+
+  # Expect that method +name+ is called, optionally with +args+ (and
+  # +kwargs+ or a +blk+, and returns +retval+.
+  #
+  #   @mock.expect(:meaning_of_life, 42)
+  #   @mock.meaning_of_life # => 42
+  #
+  #   @mock.expect(:do_something_with, true, [some_obj, true])
+  #   @mock.do_something_with(some_obj, true) # => true
+  #
+  #   @mock.expect(:do_something_else, true) do |a1, a2|
+  #     a1 == "buggs" && a2 == :bunny
+  #   end
+  #
+  # +args+ is compared to the expected args using case equality (ie, the
+  # '===' operator), allowing for less specific expectations.
+  #
+  #   @mock.expect(:uses_any_string, true, [String])
+  #   @mock.uses_any_string("foo") # => true
+  #   @mock.verify  # => true
+  #
+  #   @mock.expect(:uses_one_string, true, ["foo"])
+  #   @mock.uses_one_string("bar") # => raises MockExpectationError
+  #
+  # If a method will be called multiple times, specify a new expect for each one.
+  # They will be used in the order you define them.
+  #
+  #   @mock.expect(:ordinal_increment, 'first')
+  #   @mock.expect(:ordinal_increment, 'second')
+  #
+  #   @mock.ordinal_increment # => 'first'
+  #   @mock.ordinal_increment # => 'second'
+  #   @mock.ordinal_increment # => raises MockExpectationError "No more expects available for :ordinal_increment"
+  #
+  # source://minitest//lib/minitest/mock.rb#91
+  def expect(name, retval, args = T.unsafe(nil), **kwargs, &blk); end
+
+  # source://minitest//lib/minitest/mock.rb#31
+  def inspect(*args, **kwargs, &b); end
+
+  # source://minitest//lib/minitest/mock.rb#31
+  def instance_eval(*args, **kwargs, &b); end
+
+  # source://minitest//lib/minitest/mock.rb#31
+  def instance_variables(*args, **kwargs, &b); end
+
+  # source://minitest//lib/minitest/mock.rb#150
+  def method_missing(sym, *args, **kwargs, &block); end
+
+  # source://minitest//lib/minitest/mock.rb#31
+  def object_id(*args, **kwargs, &b); end
+
+  # source://minitest//lib/minitest/mock.rb#31
+  def public_send(*args, **kwargs, &b); end
+
+  # @return [Boolean]
+  #
+  # source://minitest//lib/minitest/mock.rb#236
+  def respond_to?(sym, include_private = T.unsafe(nil)); end
+
+  # source://minitest//lib/minitest/mock.rb#31
+  def send(*args, **kwargs, &b); end
+
+  # source://minitest//lib/minitest/mock.rb#31
+  def to_s(*args, **kwargs, &b); end
+
+  # Verify that all methods were called as expected. Raises
+  # +MockExpectationError+ if the mock object was not called as
+  # expected.
+  #
+  # source://minitest//lib/minitest/mock.rb#140
+  def verify; end
+
+  private
+
+  # source://minitest//lib/minitest/mock.rb#31
+  def respond_to_missing?(*args, **kwargs, &b); end
 end
 
 # source://minitest//lib/minitest/parallel.rb#2
@@ -1915,6 +2028,187 @@ Minitest::Test::SETUP_METHODS = T.let(T.unsafe(nil), Array)
 # source://minitest//lib/minitest/test.rb#23
 Minitest::Test::TEARDOWN_METHODS = T.let(T.unsafe(nil), Array)
 
+# Minitest::TestTask is a rake helper that generates several rake
+# tasks under the main test task's name-space.
+#
+#   task <name>      :: the main test task
+#   task <name>:cmd  :: prints the command to use
+#   task <name>:deps :: runs each test file by itself to find dependency errors
+#   task <name>:slow :: runs the tests and reports the slowest 25 tests.
+#
+# Examples:
+#
+#   Minitest::TestTask.create
+#
+# The most basic and default setup.
+#
+#   Minitest::TestTask.create :my_tests
+#
+# The most basic/default setup, but with a custom name
+#
+#   Minitest::TestTask.create :unit do |t|
+#     t.test_globs = ["test/unit/**/*_test.rb"]
+#     t.warning = false
+#   end
+#
+# Customize the name and only run unit tests.
+#
+# source://minitest//lib/minitest/test_task.rb#33
+class Minitest::TestTask < ::Rake::TaskLib
+  # Use TestTask.create instead.
+  #
+  # @return [TestTask] a new instance of TestTask
+  #
+  # source://minitest//lib/minitest/test_task.rb#105
+  def initialize(name = T.unsafe(nil)); end
+
+  # source://minitest//lib/minitest/test_task.rb#159
+  def define; end
+
+  # Extra arguments to pass to the tests. Defaults empty but gets
+  # populated by a number of enviroment variables:
+  #
+  # N (-n flag) :: a string or regexp of tests to run.
+  # X (-e flag) :: a string or regexp of tests to exclude.
+  # A (arg)     :: quick way to inject an arbitrary argument (eg A=--help).
+  #
+  # See #process_env
+  #
+  # source://minitest//lib/minitest/test_task.rb#58
+  def extra_args; end
+
+  # Extra arguments to pass to the tests. Defaults empty but gets
+  # populated by a number of enviroment variables:
+  #
+  # N (-n flag) :: a string or regexp of tests to run.
+  # X (-e flag) :: a string or regexp of tests to exclude.
+  # A (arg)     :: quick way to inject an arbitrary argument (eg A=--help).
+  #
+  # See #process_env
+  #
+  # source://minitest//lib/minitest/test_task.rb#58
+  def extra_args=(_arg0); end
+
+  # The code to load the framework. Defaults to requiring
+  # minitest/autorun...
+  #
+  # Why do I have this as an option?
+  #
+  # source://minitest//lib/minitest/test_task.rb#66
+  def framework; end
+
+  # The code to load the framework. Defaults to requiring
+  # minitest/autorun...
+  #
+  # Why do I have this as an option?
+  #
+  # source://minitest//lib/minitest/test_task.rb#66
+  def framework=(_arg0); end
+
+  # Extra library directories to include. Defaults to %w[lib test
+  # .]. Also uses $MT_LIB_EXTRAS allowing you to dynamically
+  # override/inject directories for custom runs.
+  #
+  # source://minitest//lib/minitest/test_task.rb#73
+  def libs; end
+
+  # Extra library directories to include. Defaults to %w[lib test
+  # .]. Also uses $MT_LIB_EXTRAS allowing you to dynamically
+  # override/inject directories for custom runs.
+  #
+  # source://minitest//lib/minitest/test_task.rb#73
+  def libs=(_arg0); end
+
+  # Generate the test command-line.
+  #
+  # source://minitest//lib/minitest/test_task.rb#256
+  def make_test_cmd(globs = T.unsafe(nil)); end
+
+  # The name of the task and base name for the other tasks generated.
+  #
+  # source://minitest//lib/minitest/test_task.rb#78
+  def name; end
+
+  # The name of the task and base name for the other tasks generated.
+  #
+  # source://minitest//lib/minitest/test_task.rb#78
+  def name=(_arg0); end
+
+  # Extract variables from the environment and convert them to
+  # command line arguments. See #extra_args.
+  #
+  # Environment Variables:
+  #
+  # MT_LIB_EXTRAS :: Extra libs to dynamically override/inject for custom runs.
+  # N             :: Tests to run (string or /regexp/).
+  # X             :: Tests to exclude (string or /regexp/).
+  # A             :: Any extra arguments. Honors shell quoting.
+  #
+  # Deprecated:
+  #
+  # TESTOPTS      :: For argument passing, use +A+.
+  # N             :: For parallel testing, use +MT_CPU+.
+  # FILTER        :: Same as +TESTOPTS+.
+  #
+  # source://minitest//lib/minitest/test_task.rb#134
+  def process_env; end
+
+  # File globs to find test files. Defaults to something sensible to
+  # find test files under the test directory.
+  #
+  # source://minitest//lib/minitest/test_task.rb#84
+  def test_globs; end
+
+  # File globs to find test files. Defaults to something sensible to
+  # find test files under the test directory.
+  #
+  # source://minitest//lib/minitest/test_task.rb#84
+  def test_globs=(_arg0); end
+
+  # Optional: Additional ruby to run before the test framework is loaded.
+  #
+  # source://minitest//lib/minitest/test_task.rb#94
+  def test_prelude; end
+
+  # Optional: Additional ruby to run before the test framework is loaded.
+  #
+  # source://minitest//lib/minitest/test_task.rb#94
+  def test_prelude=(_arg0); end
+
+  # Print out commands as they run. Defaults to Rake's +trace+ (-t
+  # flag) option.
+  #
+  # source://minitest//lib/minitest/test_task.rb#100
+  def verbose; end
+
+  # Print out commands as they run. Defaults to Rake's +trace+ (-t
+  # flag) option.
+  #
+  # source://minitest//lib/minitest/test_task.rb#100
+  def verbose=(_arg0); end
+
+  # Turn on ruby warnings (-w flag). Defaults to true.
+  #
+  # source://minitest//lib/minitest/test_task.rb#89
+  def warning; end
+
+  # Turn on ruby warnings (-w flag). Defaults to true.
+  #
+  # source://minitest//lib/minitest/test_task.rb#89
+  def warning=(_arg0); end
+
+  class << self
+    # Create several test-oriented tasks under +name+. Takes an
+    # optional block to customize variables.
+    #
+    # source://minitest//lib/minitest/test_task.rb#40
+    def create(name = T.unsafe(nil), &block); end
+  end
+end
+
+# source://minitest//lib/minitest/test_task.rb#34
+Minitest::TestTask::WINDOWS = T.let(T.unsafe(nil), T.untyped)
+
 # Assertion wrapping an unexpected error that was raised during a run.
 #
 # source://minitest//lib/minitest.rb#933
@@ -1969,6 +2263,9 @@ Minitest::Unit::VERSION = T.let(T.unsafe(nil), String)
 # source://minitest//lib/minitest.rb#12
 Minitest::VERSION = T.let(T.unsafe(nil), String)
 
+# source://minitest//lib/minitest/mock.rb#1
+class MockExpectationError < ::StandardError; end
+
 # source://minitest//lib/minitest/spec.rb#3
 class Module
   # source://minitest//lib/minitest/spec.rb#4
@@ -1980,4 +2277,34 @@ class Object < ::BasicObject
   include ::Kernel
   include ::PP::ObjectMixin
   include ::Minitest::Expectations
+
+  # Add a temporary stubbed method replacing +name+ for the duration
+  # of the +block+. If +val_or_callable+ responds to #call, then it
+  # returns the result of calling it, otherwise returns the value
+  # as-is. If stubbed method yields a block, +block_args+ will be
+  # passed along. Cleans up the stub at the end of the +block+. The
+  # method +name+ must exist before stubbing.
+  #
+  #     def test_stale_eh
+  #       obj_under_test = Something.new
+  #       refute obj_under_test.stale?
+  #
+  #       Time.stub :now, Time.at(0) do
+  #         assert obj_under_test.stale?
+  #       end
+  #     end
+  # --
+  # NOTE: keyword args in callables are NOT checked for correctness
+  # against the existing method. Too many edge cases to be worth it.
+  #
+  # source://minitest//lib/minitest/mock.rb#278
+  def stub(name, val_or_callable, *block_args, **block_kwargs, &block); end
+end
+
+# source://minitest//lib/minitest/test_task.rb#280
+class Work < ::Thread::Queue
+  # @return [Work] a new instance of Work
+  #
+  # source://minitest//lib/minitest/test_task.rb#281
+  def initialize(jobs = T.unsafe(nil)); end
 end
