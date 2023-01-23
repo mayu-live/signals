@@ -15,7 +15,13 @@ module Mayu
           .pack("U*")
       end
 
-      sig { params(name: T.any(Symbol, String), value: T.untyped, block: T.proc.void).void }
+      sig do
+        params(
+          name: T.any(Symbol, String),
+          value: T.untyped,
+          block: T.proc.void
+        ).void
+      end
       def self.with_fiber_local(name, value, &block)
         prev = Fiber[name]
         Fiber[name] = value
@@ -24,7 +30,7 @@ module Mayu
         Fiber[name] = prev
       end
 
-      sig {returns([String, Integer])}
+      sig { returns([String, Integer]) }
       def self.get_caller_location
         location = caller.find { !_1.start_with?(__FILE__) }
         location.match(/^(.*):(\d+):in /) => [file, line]

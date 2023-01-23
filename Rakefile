@@ -11,3 +11,8 @@ Minitest::TestTask.create(:test) do |t|
 end
 
 task :default => :test
+
+desc "Format code"
+task :format do
+  system("stree", "write", "lib/**/*.rb", "test/**/*.rb")
+end

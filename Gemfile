@@ -14,4 +14,5 @@ group :development do
   gem "tapioca", require: false
   gem "minitest-hooks", require: false
   gem "pry", require: false
+  gem "syntax_tree", require: false
 end

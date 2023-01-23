@@ -169,31 +169,31 @@ module Mayu
         class Proxy
           extend T::Sig
           extend T::Generic
-          Elem = type_member {{upper: Object}}
+          Elem = type_member { { upper: Object } }
 
-          sig {params(signal: Signal).void}
+          sig { params(signal: Signal).void }
           def initialize(signal)
             @signal = signal
           end
 
-          sig {params(block: T.proc.params(arg0: Elem).void).returns(Method)}
+          sig { params(block: T.proc.params(arg0: Elem).void).returns(Method) }
           def subscribe(&block) = @signal.subscribe(&block)
 
-          sig {returns(String)}
+          sig { returns(String) }
           def inspect = @signal.inspect
 
-          sig {returns(String)}
+          sig { returns(String) }
           def to_s = value.to_s
-          sig {returns(Integer)}
+          sig { returns(Integer) }
           def to_i = T.unsafe(value).to_i
-          sig {returns(Float)}
+          sig { returns(Float) }
           def to_f = T.unsafe(value).to_f
 
-          sig {returns(Elem)}
+          sig { returns(Elem) }
           def peek = @signal.peek
-          sig {returns(Elem)}
+          sig { returns(Elem) }
           def value = @signal.value
-          sig {params(new_value: Elem).void}
+          sig { params(new_value: Elem).void }
           def value=(new_value)
             @signal.value = new_value
           end
@@ -357,7 +357,8 @@ module Mayu
             Core.with_eval_context(self) do
               value = @compute.call
 
-              if @flags.set?(Flags::HAS_ERROR) || @value != value || @version == 0
+              if @flags.set?(Flags::HAS_ERROR) || @value != value ||
+                   @version == 0
                 @value = value
                 @flags.unset!(Flags::HAS_ERROR)
                 @version += 1
@@ -633,9 +634,7 @@ module Mayu
 
           S.batch do
             Core.with_eval_context(self) do
-              unless @flags.set?(Flags::DISPOSED)
-                @cleanup = @compute&.call
-              end
+              @cleanup = @compute&.call unless @flags.set?(Flags::DISPOSED)
             ensure
               Core.cleanup_sources(self)
             end

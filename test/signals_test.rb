@@ -243,9 +243,7 @@ describe "Signals" do
       b = S.signal("b")
       cond = S.signal(true)
 
-      spy = Spy.new do
-        cond.value ? a.value : b.value
-      end
+      spy = Spy.new { cond.value ? a.value : b.value }
 
       S.effect(&spy)
       assert_equal(1, spy.called_times)
@@ -298,9 +296,7 @@ describe "Signals" do
       spy3 = Spy.new {}
       a = S.signal(spy1)
 
-      S.effect do
-        a.value.to_proc
-      end
+      S.effect { a.value.to_proc }
 
       assert_equal(0, spy1.called_times)
       assert_equal(0, spy2.called_times)
@@ -320,9 +316,7 @@ describe "Signals" do
     it "should call the cleanup callback function when disposed" do
       spy = Spy.new {}
 
-      dispose = S.effect do
-        spy.to_proc
-      end
+      dispose = S.effect { spy.to_proc }
 
       assert_equal(0, spy.called_times)
       dispose.call
@@ -331,13 +325,12 @@ describe "Signals" do
 
     it "should not recompute if the effect has been notified about changes, but no direct dependency has actually changed" do
       s = S.signal(0)
-      c = S.computed do
-        s.value
-        0
-      end
-      spy = Spy.new do
-        c.value
-      end
+      c =
+        S.computed do
+          s.value
+          0
+        end
+      spy = Spy.new { c.value }
       S.effect(&spy)
       assert_equal(1, spy.called_times)
       spy.reset_history!
@@ -350,15 +343,12 @@ describe "Signals" do
       spy = Spy.new {}
       a = S.signal(0)
       b = S.signal(0)
-      c = S.computed do
-        b.value
-        spy.call
-      end
-      S.effect do
-        if a.value == 0
-          c.value
+      c =
+        S.computed do
+          b.value
+          spy.call
         end
-      end
+      S.effect { c.value if a.value == 0 }
       assert_equal(1, spy.called_times)
 
       S.batch do
@@ -405,11 +395,7 @@ describe "Signals" do
 
     it "should recompute if a dependency changes during computation after becoming a dependency" do
       a = S.signal(0)
-      spy = Spy.new do
-        if a.value == 0
-          a.value += 1
-        end
-      end
+      spy = Spy.new { a.value += 1 if a.value == 0 }
       S.effect(&spy)
       assert_equal(2, spy.called_times)
     end
@@ -428,10 +414,10 @@ describe "Signals" do
 
       S.effect do
         a.value
-        ->() do
+        -> {
           b.value = "x"
           c.value = "y"
-        end
+        }
       end
 
       assert_equal(1, spy.called_times)
@@ -448,9 +434,7 @@ describe "Signals" do
 
       S.effect do
         spy.call(a.value)
-        ->() do
-          a.value = 2
-        end
+        -> { a.value = 2 }
       end
       assert_equal(1, spy.called_times)
       spy.reset_history!
@@ -464,14 +448,15 @@ describe "Signals" do
       a = S.signal(0)
       spy = Spy.new {}
 
-      dispose = S.effect do
-        if a.value > 0
-          dispose.call
-          spy.to_proc
-        else
-          nil
+      dispose =
+        S.effect do
+          if a.value > 0
+            dispose.call
+            spy.to_proc
+          else
+            nil
+          end
         end
-      end
       assert_equal(0, spy.called_times)
       a.value = 1
       assert_equal(1, spy.called_times)
@@ -483,13 +468,12 @@ describe "Signals" do
       a = S.signal(0)
       spy = Spy.new {}
 
-      dispose = S.effect do
-        a.value
-        spy.call
-        ->() do
-          dispose.call
+      dispose =
+        S.effect do
+          a.value
+          spy.call
+          -> { dispose.call }
         end
-      end
       assert_equal(1, spy.called_times)
       a.value = 1
       assert_equal(1, spy.called_times)
@@ -497,10 +481,11 @@ describe "Signals" do
 
     it "should not subscribe to anything if first run throws" do
       s = S.signal(0)
-      spy = Spy.new do
-        s.value
-        raise "test"
-      end
+      spy =
+        Spy.new do
+          s.value
+          raise "test"
+        end
       e = assert_raises(RuntimeError) { S.effect(&spy) }
       assert_equal("test", e.message)
       assert_equal(1, spy.called_times)
@@ -534,9 +519,7 @@ describe "Signals" do
 
       S.effect do
         if a.value == 0
-          ->() do
-            raise "hello"
-          end
+          -> { raise "hello" }
         else
           spy.call
         end
@@ -553,16 +536,11 @@ describe "Signals" do
       spy = Spy.new {}
       a = S.signal(0)
       b = S.signal(0)
-      c = S.computed do
-        if a.value == 0
-          S.effect do
-            ->() do
-              b.value
-            end
-          end
+      c =
+        S.computed do
+          S.effect { -> { b.value } } if a.value == 0
+          a.value
         end
-        a.value
-      end
 
       S.effect do
         spy.call
@@ -583,7 +561,7 @@ describe "Signals" do
       a = S.signal(0)
       i = 0
 
-      fn = ->() do
+      fn = -> {
         S.effect do
           # Prevent test suite from spinning if limit is not hit
           if (i += 1) > 200
@@ -592,7 +570,7 @@ describe "Signals" do
           a.value
           a.value = Float::NAN
         end
-      end
+      }
 
       assert_raises(Mayu::Signals::Core::CycleDetectedError, &fn)
     end
@@ -601,13 +579,14 @@ describe "Signals" do
       a = S.signal(0)
       i = 0
 
-      c = S.computed do
-        a.value
-        a.value = Float::NAN
-        Float::NAN
-      end
+      c =
+        S.computed do
+          a.value
+          a.value = Float::NAN
+          Float::NAN
+        end
 
-      fn = ->() do
+      fn = -> {
         S.effect do
           # Prevent test suite from spinning if limit is not hit
           if (i += 1) > 200
@@ -615,7 +594,7 @@ describe "Signals" do
           end
           c.value
         end
-      end
+      }
 
       assert_raises(Mayu::Signals::Core::CycleDetectedError, &fn)
     end
@@ -633,12 +612,13 @@ describe "Signals" do
     it "should allow disposing a running effect" do
       a = S.signal(0)
       spy = Spy.new {}
-      dispose = S.effect do
-        if a.value == 1
-          dispose.call
-          spy.call
+      dispose =
+        S.effect do
+          if a.value == 1
+            dispose.call
+            spy.call
+          end
         end
-      end
       assert_equal(0, spy.called_times)
       a.value = 1
       assert_equal(1, spy.called_times)
@@ -1067,9 +1047,7 @@ describe "Signals" do
       it "should not make surrounding effect depend on the computed" do
         s = S.signal(1)
         c = S.computed { s.value }
-        spy = Spy.new do
-          c.peek
-        end
+        spy = Spy.new { c.peek }
 
         S.effect(&spy)
         assert_equal(1, spy.called_times)
@@ -1082,9 +1060,7 @@ describe "Signals" do
         s = S.signal(1)
         c = S.computed { s.value }
 
-        spy = Spy.new do
-          c.peek()
-        end
+        spy = Spy.new { c.peek() }
 
         d = S.computed(&spy)
         d.value
@@ -1114,10 +1090,11 @@ describe "Signals" do
         a = S.signal(1)
         b = S.computed { a.value }
         spy = Spy.new {}
-        d = S.computed do
-          spy.call
-          b.peek
-        end
+        d =
+          S.computed do
+            spy.call
+            b.peek
+          end
         d.value
         assert_equal(1, spy.called_times)
         spy.reset_history!
@@ -1168,10 +1145,11 @@ describe "Signals" do
         a = S.signal("a")
         b = S.signal("b")
 
-        compute = Spy.new do
-          # binding.pry
-          a.value + b.value
-        end
+        compute =
+          Spy.new do
+            # binding.pry
+            a.value + b.value
+          end
         c = S.computed(&compute)
 
         assert_equal("ab", c.value)
@@ -1184,7 +1162,7 @@ describe "Signals" do
         assert(1, compute.called_times)
       end
 
-      it "should drop A->B->A updates"  do
+      it "should drop A->B->A updates" do
         #     A
         #   / |
         #  B  | <- Looks like a flag doesn't it? :D
@@ -1263,10 +1241,11 @@ describe "Signals" do
         # Bail out if value of "B" never changes
         # A->B->C
         a = S.signal("a")
-        b = S.computed do
-          a.value
-          "foo"
-        end
+        b =
+          S.computed do
+            a.value
+            "foo"
+          end
 
         spy = Spy.new { b.value }
         c = S.computed(&spy)
@@ -1412,10 +1391,11 @@ describe "Signals" do
         #     D
         a = S.signal("a")
         b = S.computed { a.value }
-        c = S.computed do
-          a.value
-          "c"
-        end
+        c =
+          S.computed do
+            a.value
+            "c"
+          end
         spy = Spy.new { b.value + " " + c.value }
         d = S.computed(&spy)
         assert_equal("a c", d.value)
@@ -1437,14 +1417,16 @@ describe "Signals" do
         #     E
         a = S.signal("a")
         b = S.computed { a.value }
-        c = S.computed do
-          a.value
-          "c"
-        end
-        d = S.computed do
-          a.value
-          "d"
-        end
+        c =
+          S.computed do
+            a.value
+            "c"
+          end
+        d =
+          S.computed do
+            a.value
+            "d"
+          end
         spy = Spy.new { b.value + " " + c.value + " " + d.value }
         e = S.computed(&spy)
         assert_equal("a c d", e.value)
@@ -1465,9 +1447,7 @@ describe "Signals" do
 
       it "should keep graph consistent on errors during activation" do
         a = S.signal(0)
-        b = S.computed do
-          raise "fail"
-        end
+        b = S.computed { raise "fail" }
         c = S.computed { a.value }
         e = assert_raises(RuntimeError) { b.value }
         assert_equal("fail", e.message)
@@ -1478,10 +1458,11 @@ describe "Signals" do
 
       it "should keep graph consistent on errors in computeds" do
         a = S.signal(0)
-        b = S.computed do
-          raise "fail" if a.value == 1
-          a.value
-        end
+        b =
+          S.computed do
+            raise "fail" if a.value == 1
+            a.value
+          end
         c = S.computed { b.value }
         assert_equal(0, c.value)
 
@@ -1515,14 +1496,16 @@ describe "Signals" do
         #   \   /
         #     D
         a = S.signal("a")
-        b = S.computed do
-          a.value
-          "b"
-        end
-        c = S.computed do
-          a.value
-          "c"
-        end
+        b =
+          S.computed do
+            a.value
+            "b"
+          end
+        c =
+          S.computed do
+            a.value
+            "c"
+          end
         spy = Spy.new { b.value + " " + c.value }
         d = S.computed(&spy)
         assert_equal("b c", d.value)
@@ -1540,11 +1523,7 @@ describe "Signals" do
     # end
 
     it "should throw errors thrown from the callback" do
-      e = assert_raises(RuntimeError) do
-        S.batch do
-          raise "hello"
-        end
-      end
+      e = assert_raises(RuntimeError) { S.batch { raise "hello" } }
       assert_equal("hello", e.message)
     end
 
@@ -1669,9 +1648,7 @@ describe "Signals" do
       double = S.computed { counter.value * 2 }
       triple = S.computed { counter.value * 3 }
 
-      S.effect do
-        invokes.push([double.value, triple.value])
-      end
+      S.effect { invokes.push([double.value, triple.value]) }
 
       assert_equal([[0, 0]], invokes)
 
@@ -1689,9 +1666,7 @@ describe "Signals" do
       double = S.computed { counter.value * 2 }
       triple = S.computed { counter.value * 3 }
 
-      S.effect do
-        invokes.push([double.value, triple.value])
-      end
+      S.effect { invokes.push([double.value, triple.value]) }
 
       assert_equal([[0, 0]], invokes)
 
@@ -1703,70 +1678,58 @@ describe "Signals" do
       assert_equal([2, 3], invokes[1])
     end
 
-    # it "should run pending effects even if the callback throws" do
-    #   a = S.signal(0)
-    #   b = S.signal(1)
-    #   spy1 = Spy.new { a.value }
-    #   spy2 = Spy.new { b.value }
-    #   S.effect(&spy1)
-    #   S.effect(&spy2)
-    #   spy1.reset_history!
-    #   spy2.reset_history!
-    #
-    #   expect(() =>
-    #     S.batch do
-    #       a.value += 1
-    #       b.value += 1
-    #       raise "hello"
-    #     end
-    #   ).to.throw("hello")
-    #
-    #   assert_equal(1, spy1.called_times)
-    #   assert_equal(1, spy2.called_times)
-    # end
-    #
-    # it "should run pending effects even if some effects throw" do
-    #   a = S.signal(0)
-    #   spy1 = Spy.new { a.value }
-    #   spy2 = Spy.new { a.value }
-    #   S.effect do
-    #     if a.value == 1
-    #       raise "hello"
-    #     end
-    #   end
-    #   S.effect(&spy1)
-    #   S.effect do
-    #     if a.value == 1
-    #       raise "hello"
-    #     end
-    #   end
-    #   S.effect(&spy2)
-    #   S.effect do
-    #     if a.value == 1
-    #       raise "hello"
-    #     end
-    #   end
-    #   spy1.reset_history!
-    #   spy2.reset_history!
-    #
-    #   expect(() =>
-    #     S.batch do
-    #       a.value += 1
-    #     end
-    #   ).to.throw("hello")
-    #
-    #   assert_equal(1, spy1.called_times)
-    #   assert_equal(1, spy2.called_times)
-    # end
-    #
-    # it "should run effect's first run immediately even inside a batch" do
-    #   called_times = 0
-    #   spy = Spy.new {}
-    #   S.batch do
-    #     S.effect(&spy)
-    #     called_times = spy.called_times
-    #   end
-    #   assert_equal(1, called_times)
-    # end
+    it "should run pending effects even if the callback throws" do
+      a = S.signal(0)
+      b = S.signal(1)
+      spy1 = Spy.new { a.value }
+      spy2 = Spy.new { b.value }
+      S.effect(&spy1)
+      S.effect(&spy2)
+      spy1.reset_history!
+      spy2.reset_history!
+
+      e =
+        assert_raises(RuntimeError) do
+          S.batch do
+            a.value += 1
+            b.value += 1
+            raise "hello"
+          end
+        end
+
+      assert_equal("hello", e.message)
+
+      assert_equal(1, spy1.called_times)
+      assert_equal(1, spy2.called_times)
+    end
+
+    it "should run pending effects even if some effects throw" do
+      a = S.signal(0)
+      spy1 = Spy.new { a.value }
+      spy2 = Spy.new { a.value }
+      S.effect { raise "hello" if a.value == 1 }
+      S.effect(&spy1)
+      S.effect { raise "hello" if a.value == 1 }
+      S.effect(&spy2)
+      S.effect { raise "hello" if a.value == 1 }
+      spy1.reset_history!
+      spy2.reset_history!
+
+      e = assert_raises(RuntimeError) { S.batch { a.value += 1 } }
+      assert_equal("hello", e.message)
+
+      assert_equal(1, spy1.called_times)
+      assert_equal(1, spy2.called_times)
+    end
+
+    it "should run effect's first run immediately even inside a batch" do
+      called_times = 0
+      spy = Spy.new {}
+      S.batch do
+        S.effect(&spy)
+        called_times = spy.called_times
+      end
+      assert_equal(1, called_times)
+    end
   end
 end
