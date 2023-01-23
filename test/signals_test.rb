@@ -1346,114 +1346,114 @@ describe "Signals" do
       #   # left to right
       #   expect(fSpy).to.have.been.calledBefore(gSpy)
       # end
-      #
-      # it "should only subscribe to signals listened to" do
-      #   #    *A
-      #   #   /   \
-      #   # *B     C <- we don't listen to C
-      #   a = S.signal("a")
-      #
-      #   b = S.computed { a.value }
-      #   spy = Spy.new { a.value }
-      #   computed(spy)
-      #
-      #   assert_equal("a", b.value)
-      #   assert_equal(0, spy.called_times)
-      #
-      #   a.value = "aa"
-      #   assert_equal("aa", b.value)
-      #   assert_equal(0, spy.called_times)
-      # end
-      #
-      # it "should only subscribe to signals listened to" do
-      #   # Here both "B" and "C" are active in the beginning, but
-      #   # "B" becomes inactive later. At that point it should
-      #   # not receive any updates anymore.
-      #   #    *A
-      #   #   /   \
-      #   # *B     D <- we don't listen to C
-      #   #  |
-      #   # *C
-      #   a = S.signal("a")
-      #   spyB = Spy.new { a.value }
-      #   b = S.computed(&spyB)
-      #
-      #   spy_c = Spy.new { b.value }
-      #   c = S.computed(&spy_c)
-      #
-      #   d = S.computed { a.value }
-      #
-      #   result = ""
-      #   unsub = S.effect { (result = c.value })
-      #
-      #   assert_equal("a", result)
-      #   assert_equal("a", d.value)
-      #
-      #   spyB.reset_history!
-      #   spy_c.reset_history!
-      #   unsub()
-      #
-      #   a.value = "aa"
-      #
-      #   assert_equal(0, spyB.called_times)
-      #   assert_equal(0, spy_c.called_times)
-      #   assert_equal("aa", d.value)
-      # end
-      #
-      # it "should ensure subs update even if one dep unmarks it" do
-      #   # In this scenario "C" always returns the same value. When "A"
-      #   # changes, "B" will update, then "C" at which point its update
-      #   # to "D" will be unmarked. But "D" must still update because
-      #   # "B" marked it. If "D" isn't updated, then we have a bug.
-      #   #     A
-      #   #   /   \
-      #   #  B     *C <- returns same value every time
-      #   #   \   /
-      #   #     D
-      #   a = S.signal("a")
-      #   b = S.computed { a.value }
-      #   c = S.computed do
-      #     a.value
-      #     "c"
-      #   end
-      #   spy = Spy.new { b.value + " " + c.value }
-      #   d = S.computed(&spy)
-      #   assert_equal("a c", d.value)
-      #   spy.reset_history!
-      #
-      #   a.value = "aa"
-      #   d.value
-      #   expect(spy).to.returned("aa c")
-      # end
-      #
-      # it "should ensure subs update even if two deps unmark it" do
-      #   # In this scenario both "C" and "D" always return the same
-      #   # value. But "E" must still update because "A"  marked it.
-      #   # If "E" isn't updated, then we have a bug.
-      #   #     A
-      #   #   / | \
-      #   #  B *C *D
-      #   #   \ | /
-      #   #     E
-      #   a = S.signal("a")
-      #   b = S.computed { a.value }
-      #   c = S.computed do
-      #     a.value
-      #     "c"
-      #   end
-      #   d = S.computed do
-      #     a.value
-      #     "d"
-      #   end
-      #   spy = Spy.new { b.value + " " + c.value + " " + d.value }
-      #   e = S.computed(&spy)
-      #   assert_equal("a c d", e.value)
-      #   spy.reset_history!
-      #
-      #   a.value = "aa"
-      #   e.value
-      #   expect(spy).to.returned("aa c d")
-      # end
+
+      it "should only subscribe to signals listened to" do
+        #    *A
+        #   /   \
+        # *B     C <- we don't listen to C
+        a = S.signal("a")
+
+        b = S.computed { a.value }
+        spy = Spy.new { a.value }
+        S.computed(&spy)
+
+        assert_equal("a", b.value)
+        assert_equal(0, spy.called_times)
+
+        a.value = "aa"
+        assert_equal("aa", b.value)
+        assert_equal(0, spy.called_times)
+      end
+
+      it "should only subscribe to signals listened to" do
+        # Here both "B" and "C" are active in the beginning, but
+        # "B" becomes inactive later. At that point it should
+        # not receive any updates anymore.
+        #    *A
+        #   /   \
+        # *B     D <- we don't listen to C
+        #  |
+        # *C
+        a = S.signal("a")
+        spy_b = Spy.new { a.value }
+        b = S.computed(&spy_b)
+
+        spy_c = Spy.new { b.value }
+        c = S.computed(&spy_c)
+
+        d = S.computed { a.value }
+
+        result = ""
+        unsub = S.effect { result = c.value }
+
+        assert_equal("a", result)
+        assert_equal("a", d.value)
+
+        spy_b.reset_history!
+        spy_c.reset_history!
+        unsub.call()
+
+        a.value = "aa"
+
+        assert_equal(0, spy_b.called_times)
+        assert_equal(0, spy_c.called_times)
+        assert_equal("aa", d.value)
+      end
+
+      it "should ensure subs update even if one dep unmarks it" do
+        # In this scenario "C" always returns the same value. When "A"
+        # changes, "B" will update, then "C" at which point its update
+        # to "D" will be unmarked. But "D" must still update because
+        # "B" marked it. If "D" isn't updated, then we have a bug.
+        #     A
+        #   /   \
+        #  B     *C <- returns same value every time
+        #   \   /
+        #     D
+        a = S.signal("a")
+        b = S.computed { a.value }
+        c = S.computed do
+          a.value
+          "c"
+        end
+        spy = Spy.new { b.value + " " + c.value }
+        d = S.computed(&spy)
+        assert_equal("a c", d.value)
+        spy.reset_history!
+
+        a.value = "aa"
+        d.value
+        assert_equal("aa c", spy.return_value)
+      end
+
+      it "should ensure subs update even if two deps unmark it" do
+        # In this scenario both "C" and "D" always return the same
+        # value. But "E" must still update because "A"  marked it.
+        # If "E" isn't updated, then we have a bug.
+        #     A
+        #   / | \
+        #  B *C *D
+        #   \ | /
+        #     E
+        a = S.signal("a")
+        b = S.computed { a.value }
+        c = S.computed do
+          a.value
+          "c"
+        end
+        d = S.computed do
+          a.value
+          "d"
+        end
+        spy = Spy.new { b.value + " " + c.value + " " + d.value }
+        e = S.computed(&spy)
+        assert_equal("a c d", e.value)
+        spy.reset_history!
+
+        a.value = "aa"
+        e.value
+        assert_equal("aa c d", spy.return_value)
+      end
     end
     describe "error handling" do
       # it "should throw when writing to computeds" do
@@ -1462,244 +1462,247 @@ describe "Signals" do
       #   fn = () => ((b as Signal).value = "aa")
       #   expect(fn).to.throw(/Cannot set property value/)
       # end
-      #
-      # it "should keep graph consistent on errors during activation" do
-      #   a = S.signal(0)
-      #   b = S.computed do
-      #     raise "fail"
-      #   end
-      #   c = S.computed { a.value }
-      #   expect(() => b.value).to.throw("fail")
-      #
-      #   a.value = 1
-      #   assert_equal(1, c.value)
-      # end
-      #
-      # it "should keep graph consistent on errors in computeds" do
-      #   a = S.signal(0)
-      #   b = S.computed do
-      #     if (a.value == 1) raise "fail"
-      #     a.value
-      #   end
-      #   c = S.computed { b.value }
-      #   assert_equal(0, c.value)
-      #
-      #   a.value = 1
-      #   expect(() => b.value).to.throw("fail")
-      #
-      #   a.value = 2
-      #   assert_equal(2, c.value)
-      # end
-      #
-      # it "should support lazy branches" do
-      #   a = S.signal(0)
-      #   b = S.computed { a.value }
-      #   c = S.computed { (a.value > 0 ? a.value : b.value })
-      #
-      #   assert_equal(0, c.value)
-      #   a.value = 1
-      #   assert_equal(1, c.value)
-      #
-      #   a.value = 0
-      #   assert_equal(0, c.value)
-      # end
-      #
-      # it "should not update a sub if all deps unmark it" do
-      #   # In this scenario "B" and "C" always return the same value. When "A"
-      #   # changes, "D" should not update.
-      #   #     A
-      #   #   /   \
-      #   # *B     *C
-      #   #   \   /
-      #   #     D
-      #   a = S.signal("a")
-      #   b = S.computed do
-      #     a.value
-      #     "b"
-      #   end
-      #   c = S.computed do
-      #     a.value
-      #     "c"
-      #   end
-      #   spy = Spy.new { b.value + " " + c.value }
-      #   d = S.computed(&spy)
-      #   assert_equal("b c", d.value)
-      #   spy.reset_history!
-      #
-      #   a.value = "aa"
-      #   assert_equal(0, spy.called_times)
-      # end
+
+      it "should keep graph consistent on errors during activation" do
+        a = S.signal(0)
+        b = S.computed do
+          raise "fail"
+        end
+        c = S.computed { a.value }
+        e = assert_raises(RuntimeError) { b.value }
+        assert_equal("fail", e.message)
+
+        a.value = 1
+        assert_equal(1, c.value)
+      end
+
+      it "should keep graph consistent on errors in computeds" do
+        a = S.signal(0)
+        b = S.computed do
+          raise "fail" if a.value == 1
+          a.value
+        end
+        c = S.computed { b.value }
+        assert_equal(0, c.value)
+
+        a.value = 1
+        e = assert_raises(RuntimeError) { b.value }
+        assert_equal("fail", e.message)
+
+        a.value = 2
+        assert_equal(2, c.value)
+      end
+
+      it "should support lazy branches" do
+        a = S.signal(0)
+        b = S.computed { a.value }
+        c = S.computed { a.value > 0 ? a.value : b.value }
+
+        assert_equal(0, c.value)
+        a.value = 1
+        assert_equal(1, c.value)
+
+        a.value = 0
+        assert_equal(0, c.value)
+      end
+
+      it "should not update a sub if all deps unmark it" do
+        # In this scenario "B" and "C" always return the same value. When "A"
+        # changes, "D" should not update.
+        #     A
+        #   /   \
+        # *B     *C
+        #   \   /
+        #     D
+        a = S.signal("a")
+        b = S.computed do
+          a.value
+          "b"
+        end
+        c = S.computed do
+          a.value
+          "c"
+        end
+        spy = Spy.new { b.value + " " + c.value }
+        d = S.computed(&spy)
+        assert_equal("b c", d.value)
+        spy.reset_history!
+
+        a.value = "aa"
+        assert_equal(0, spy.called_times)
+      end
     end
   end
 
   describe "batch/transaction" do
     # it "should return the value from the callback" do
-    #   expect(batch() => 1)).to.equal(1)
+    #   assert_equal(1, S.batch { 1 })
     # end
-    #
-    # it "should throw errors thrown from the callback" do
-    #   expect(() =>
-    #     S.batch do
-    #       raise "hello"
-    #     end
-    #   ).to.throw("hello")
-    # end
-    #
+
+    it "should throw errors thrown from the callback" do
+      e = assert_raises(RuntimeError) do
+        S.batch do
+          raise "hello"
+        end
+      end
+      assert_equal("hello", e.message)
+    end
+
     # it "should throw non-errors thrown from the callback" do
-    #   begin)
+    #   begin
     #     S.batch do
-    #       throw undefined
+    #       raise
     #     end
     #     expect.fail()
     #   rescue => err
     #     assert_nil(err)
     #   end
     # end
-    #
-    # it "should delay writes" do
-    #   a = S.signal("a")
-    #   b = S.signal("b")
-    #   spy = Spy.new { a.value + " " + b.value }
-    #   S.effect(&spy)
-    #   spy.reset_history!
-    #
-    #   S.batch do
-    #     a.value = "aa"
-    #     b.value = "bb"
-    #   end
-    #
-    #   assert_equal(1, spy.called_times)
-    # end
-    #
-    # it "should delay writes until outermost batch is complete" do
-    #   a = S.signal("a")
-    #   b = S.signal("b")
-    #   spy = Spy.new { a.value + ", " + b.value }
-    #   S.effect(&spy)
-    #   spy.reset_history!
-    #
-    #   S.batch do
-    #     S.batch do
-    #       a.value += " inner"
-    #       b.value += " inner"
-    #     end
-    #     a.value += " outer"
-    #     b.value += " outer"
-    #   end
-    #
-    #   # If the inner batch) would have flushed the update
-    #   # this spy would've been called twice.
-    #   assert_equal(1, spy.called_times)
-    # end
-    #
-    # it "should read signals written to" do
-    #   a = S.signal("a")
-    #
-    #   result = ""
-    #   S.batch do
-    #     a.value = "aa"
-    #     result = a.value
-    #   end
-    #
-    #   assert_equal("aa", result)
-    # end
-    #
-    # it "should read computed signals with updated source signals" do
-    #   # A->B->C->D->E
-    #   a = S.signal("a")
-    #   b = S.computed { a.value }
-    #
-    #   spy_c = Spy.new { b.value }
-    #   c = S.computed(&spy_c)
-    #
-    #   spy_d = Spy.new { c.value }
-    #   d = S.computed(&spy_d)
-    #
-    #   spy_e = Spy.new { d.value }
-    #   e = S.computed(&spy_e)
-    #
-    #   spy_c.reset_history!
-    #   spy_d.reset_history!
-    #   spy_e.reset_history!
-    #
-    #   result = ""
-    #   S.batch do
-    #     a.value = "aa"
-    #     result = c.value
-    #
-    #     # Since "D" isn't accessed during batching, we should not
-    #     # update it, only after batching has completed
-    #     assert_equal(0, spy_d.called_times)
-    #   end
-    #
-    #   assert_equal("aa", result)
-    #   assert_equal("aa", d.value)
-    #   assert_equal("aa", e.value)
-    #   assert_equal(1, spy_c.called_times)
-    #   assert_equal(1, spy_d.called_times)
-    #   assert_equal(1, spy_e.called_times)
-    # end
-    #
-    # it "should not block writes after batching completed" do
-    #   # If no further writes after batch) are possible, than we
-    #   # didn't restore state properly. Most likely "pending" still
-    #   # holds elements that are already processed.
-    #   a = S.signal("a")
-    #   b = S.signal("b")
-    #   c = S.signal("c")
-    #   d = S.computed { a.value + " " + b.value + " " + c.value }
-    #
-    #   result
-    #   S.effect { (result = d.value })
-    #
-    #   S.batch do
-    #     a.value = "aa"
-    #     b.value = "bb"
-    #   end
-    #   c.value = "cc"
-    #   assert_equal("aa bb cc", result)
-    # end
-    #
-    # it "should not lead to stale signals with .value in batch" do
-    #   invokes: number[][] = []
-    #   counter = S.signal(0)
-    #   double = S.computed { counter.value * 2 }
-    #   triple = S.computed { counter.value * 3 }
-    #
-    #   S.effect do
-    #     invokes.push([double.value, triple.value])
-    #   end
-    #
-    #   assert_equal([[0, 0]], invokes)
-    #
-    #   S.batch do
-    #     counter.value = 1
-    #     assert_equal(2, double.value)
-    #   end
-    #
-    #   assert_equal([2, 3], invokes[1])
-    # end
-    #
-    # it "should not lead to stale signals with peek() in batch" do
-    #   invokes: number[][] = []
-    #   counter = S.signal(0)
-    #   double = S.computed { counter.value * 2 }
-    #   triple = S.computed { counter.value * 3 }
-    #
-    #   S.effect do
-    #     invokes.push([double.value, triple.value])
-    #   end
-    #
-    #   assert_equal([[0, 0]], invokes)
-    #
-    #   S.batch do
-    #     counter.value = 1
-    #     assert_equal(2, double.peek)
-    #   end
-    #
-    #   assert_equal([2, 3], invokes[1])
-    # end
-    #
+
+    it "should delay writes" do
+      a = S.signal("a")
+      b = S.signal("b")
+      spy = Spy.new { a.value + " " + b.value }
+      S.effect(&spy)
+      spy.reset_history!
+
+      S.batch do
+        a.value = "aa"
+        b.value = "bb"
+      end
+
+      assert_equal(1, spy.called_times)
+    end
+
+    it "should delay writes until outermost batch is complete" do
+      a = S.signal("a")
+      b = S.signal("b")
+      spy = Spy.new { a.value + ", " + b.value }
+      S.effect(&spy)
+      spy.reset_history!
+
+      S.batch do
+        S.batch do
+          a.value += " inner"
+          b.value += " inner"
+        end
+        a.value += " outer"
+        b.value += " outer"
+      end
+
+      # If the inner batch) would have flushed the update
+      # this spy would've been called twice.
+      assert_equal(1, spy.called_times)
+    end
+
+    it "should read signals written to" do
+      a = S.signal("a")
+
+      result = ""
+      S.batch do
+        a.value = "aa"
+        result = a.value
+      end
+
+      assert_equal("aa", result)
+    end
+
+    it "should read computed signals with updated source signals" do
+      # A->B->C->D->E
+      a = S.signal("a")
+      b = S.computed { a.value }
+
+      spy_c = Spy.new { b.value }
+      c = S.computed(&spy_c)
+
+      spy_d = Spy.new { c.value }
+      d = S.computed(&spy_d)
+
+      spy_e = Spy.new { d.value }
+      e = S.computed(&spy_e)
+
+      spy_c.reset_history!
+      spy_d.reset_history!
+      spy_e.reset_history!
+
+      result = ""
+      S.batch do
+        a.value = "aa"
+        result = c.value
+
+        # Since "D" isn't accessed during batching, we should not
+        # update it, only after batching has completed
+        assert_equal(0, spy_d.called_times)
+      end
+
+      assert_equal("aa", result)
+      assert_equal("aa", d.value)
+      assert_equal("aa", e.value)
+      assert_equal(1, spy_c.called_times)
+      assert_equal(1, spy_d.called_times)
+      assert_equal(1, spy_e.called_times)
+    end
+
+    it "should not block writes after batching completed" do
+      # If no further writes after batch) are possible, than we
+      # didn't restore state properly. Most likely "pending" still
+      # holds elements that are already processed.
+      a = S.signal("a")
+      b = S.signal("b")
+      c = S.signal("c")
+      d = S.computed { a.value + " " + b.value + " " + c.value }
+
+      result = nil
+      S.effect { result = d.value }
+
+      S.batch do
+        a.value = "aa"
+        b.value = "bb"
+      end
+      c.value = "cc"
+      assert_equal("aa bb cc", result)
+    end
+
+    it "should not lead to stale signals with .value in batch" do
+      invokes = []
+      counter = S.signal(0)
+      double = S.computed { counter.value * 2 }
+      triple = S.computed { counter.value * 3 }
+
+      S.effect do
+        invokes.push([double.value, triple.value])
+      end
+
+      assert_equal([[0, 0]], invokes)
+
+      S.batch do
+        counter.value = 1
+        assert_equal(2, double.value)
+      end
+
+      assert_equal([2, 3], invokes[1])
+    end
+
+    it "should not lead to stale signals with peek() in batch" do
+      invokes = []
+      counter = S.signal(0)
+      double = S.computed { counter.value * 2 }
+      triple = S.computed { counter.value * 3 }
+
+      S.effect do
+        invokes.push([double.value, triple.value])
+      end
+
+      assert_equal([[0, 0]], invokes)
+
+      S.batch do
+        counter.value = 1
+        assert_equal(2, double.peek)
+      end
+
+      assert_equal([2, 3], invokes[1])
+    end
+
     # it "should run pending effects even if the callback throws" do
     #   a = S.signal(0)
     #   b = S.signal(1)
