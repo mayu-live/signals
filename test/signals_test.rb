@@ -479,7 +479,7 @@ describe "Signals" do
       assert_equal(1, spy.called_times)
     end
 
-    it "should not subscribe to anything if first run throws" do
+    it "should not subscribe to anything if first run raises" do
       s = S.signal(0)
       spy =
         Spy.new do
@@ -494,7 +494,7 @@ describe "Signals" do
       assert_equal(1, spy.called_times)
     end
 
-    it "should reset the cleanup if the effect throws" do
+    it "should reset the cleanup if the effect raises" do
       a = S.signal(0)
       spy = Spy.new {}
 
@@ -513,7 +513,7 @@ describe "Signals" do
       assert_equal(1, spy.called_times)
     end
 
-    it "should dispose the effect if the cleanup callback throws" do
+    it "should dispose the effect if the cleanup callback raises" do
       a = S.signal(0)
       spy = Spy.new {}
 
@@ -557,7 +557,7 @@ describe "Signals" do
       assert_equal(0, spy.called_times)
     end
 
-    it "should throw on cycles" do
+    it "should raise on cycles" do
       a = S.signal(0)
       i = 0
 
@@ -575,7 +575,7 @@ describe "Signals" do
       assert_raises(Mayu::Signals::Core::CycleDetectedError, &fn)
     end
 
-    it "should throw on indirect cycles" do
+    it "should raise on indirect cycles" do
       a = S.signal(0)
       i = 0
 
@@ -714,7 +714,7 @@ describe "Signals" do
     #   assert_equal(0, spy.called_times)
     # end
     #
-    # it "should throw on out-of-order start1-start2-end1 sequences" do
+    # it "should raise on out-of-order start1-start2-end1 sequences" do
     #   e1: any
     #   effect(function (this: any) {
     #     e1 = this
@@ -728,14 +728,14 @@ describe "Signals" do
     #   done1 = e1._start()
     #   done2 = e2._start()
     #   begin)
-    #     expect(() => done1()).to.throw(/Out-of-order/)
+    #     expect(() => done1()).to.raise(/Out-of-order/)
     #   } finally {
     #     done2()
     #     done1()
     #   end
     # end
     #
-    # it "should throw a cycle detection error when _start is called while the effect is running" do
+    # it "should raise a cycle detection error when _start is called while the effect is running" do
     #   e: any
     #   effect(function (this: any) {
     #     e = this
@@ -743,7 +743,7 @@ describe "Signals" do
     #
     #   done = e._start()
     #   begin)
-    #     expect(() => e._start()).to.throw(/Cycle detected/)
+    #     expect(() => e._start()).to.raise(/Cycle detected/)
     #   } finally {
     #     done()
     #   end
@@ -1438,7 +1438,7 @@ describe "Signals" do
       end
     end
     describe "error handling" do
-      it "should throw when writing to computeds" do
+      it "should raise when writing to computeds" do
         a = S.signal("a")
         b = S.computed { a.value }
         assert_raises(NoMethodError) do
@@ -1523,12 +1523,12 @@ describe "Signals" do
       assert_equal(1, S.batch { 1 })
     end
 
-    it "should throw errors thrown from the callback" do
+    it "should raise errors raised from the callback" do
       e = assert_raises(RuntimeError) { S.batch { raise "hello" } }
       assert_equal("hello", e.message)
     end
 
-    # it "should throw non-errors thrown from the callback" do
+    # it "should raise non-errors raised from the callback" do
     #   begin
     #     S.batch do
     #       raise
@@ -1679,7 +1679,7 @@ describe "Signals" do
       assert_equal([2, 3], invokes[1])
     end
 
-    it "should run pending effects even if the callback throws" do
+    it "should run pending effects even if the callback raises" do
       a = S.signal(0)
       b = S.signal(1)
       spy1 = Spy.new { a.value }
@@ -1704,7 +1704,7 @@ describe "Signals" do
       assert_equal(1, spy2.called_times)
     end
 
-    it "should run pending effects even if some effects throw" do
+    it "should run pending effects even if some effects raise" do
       a = S.signal(0)
       spy1 = Spy.new { a.value }
       spy2 = Spy.new { a.value }
