@@ -302,7 +302,7 @@ module Mayu
 
         def inspect
           @compute.source_location => [file, line]
-          "𝙘𝙤𝙢𝙥𝙪𝙩𝙚#{Utils.numbers_to_subscript(@version)}[#{@flags}](#{file}:#{line} 𝚺(#{@value.inspect}))"
+          "𝙘𝙤𝙢𝙥𝙪𝙩𝙚#{Utils.numbers_to_subscript(@version.to_s)}[#{@flags}](#{file}:#{line} 𝚺(#{@value.inspect}))"
         end
 
         def peek
@@ -323,6 +323,8 @@ module Mayu
 
           @value
         end
+
+        undef_method :value=
 
         def _refresh
           @flags.unset!(Flags::NOTIFIED)

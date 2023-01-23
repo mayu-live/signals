@@ -13,7 +13,11 @@ module Mayu
       sig { params(block: T.proc.void).void }
       def root(&block) = Core::Root.create(&block)
 
-      sig { params(block: T.proc.void).void }
+      sig do
+        type_parameters(:R)
+          .params(block: T.proc.returns(T.type_parameter(:R)))
+          .returns(T.type_parameter(:R))
+      end
       def batch(&block) = Core::Root.current.batch(&block)
 
       sig do

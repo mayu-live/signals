@@ -1438,12 +1438,13 @@ describe "Signals" do
       end
     end
     describe "error handling" do
-      # it "should throw when writing to computeds" do
-      #   a = S.signal("a")
-      #   b = S.computed { a.value }
-      #   fn = () => ((b as Signal).value = "aa")
-      #   expect(fn).to.throw(/Cannot set property value/)
-      # end
+      it "should throw when writing to computeds" do
+        a = S.signal("a")
+        b = S.computed { a.value }
+        assert_raises(NoMethodError) do
+          b.value = "aa"
+        end
+      end
 
       it "should keep graph consistent on errors during activation" do
         a = S.signal(0)
@@ -1518,9 +1519,9 @@ describe "Signals" do
   end
 
   describe "batch/transaction" do
-    # it "should return the value from the callback" do
-    #   assert_equal(1, S.batch { 1 })
-    # end
+    it "should return the value from the callback" do
+      assert_equal(1, S.batch { 1 })
+    end
 
     it "should throw errors thrown from the callback" do
       e = assert_raises(RuntimeError) { S.batch { raise "hello" } }
